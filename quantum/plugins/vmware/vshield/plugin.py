@@ -148,7 +148,7 @@ class LoadBalancerPlugin(loadbalancer_db.LoadBalancerPluginDb):
 
     def delete_pool(self, context, id):
         with context.session.begin(subtransactions=True):
-            pool = this.get_pool(context, id)
+            pool = self.get_pool(context, id)
             uuid2vseid = self.vselb.get_pool_vseid(context, id)
             self.update_status(context, loadbalancer_db.Pool, id,
                                constants.PENDING_DELETE)
