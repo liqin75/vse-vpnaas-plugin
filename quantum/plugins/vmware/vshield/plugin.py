@@ -19,11 +19,13 @@
 from quantum.db import api as qdbapi
 from quantum.db import model_base
 from quantum.db.loadbalancer import loadbalancer_db
+from quantum.db import firewall_db as fw_db
 from quantum.extensions import loadbalancer
 from quantum.openstack.common import log as logging
 from quantum.plugins.common import constants
 from vseapi import VseAPI
 from lbapi import LoadBalancerAPI
+from fwapi import FirewallAPI
 
 LOG = logging.getLogger(__name__)
 
@@ -288,3 +290,55 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
                            constants.PENDING_DELETE)
         LOG.debug(_("Delete health_monitor: %s"), id)
         super(VShieldEdgeLBPlugin, self).delete_health_monitor(context, id)
+
+
+class VShieldEdgeFWPlugin(fw_db.FirewallPluginDb):
+
+    supported_extension_aliases = ["fwaas"]
+
+    def __init__(self):
+        """
+        Do the initialization for the firewall service plugin here.
+        """
+        # Hard coded for now
+        vseapi = VseAPI(edgeUri, edgeUser, edgePasswd, edgeId)
+        self.vsefw = FirewallAPI(vseapi)
+        qdbapi.register_models(base=model_base.BASEV2)
+
+    def get_plugin_type(self):
+        return constants.FIREWALL
+
+    def get_plugin_description(self):
+        return "Quantum Firewall Service Plugin"
+
+    def create_rule(self, context, rule):
+        with context.session.begin(subtransactions=True):
+            rule = super(VShieldEdgeFWPlugin, self).create_rule(context, rule)
+            self.vsefw.create_rule(context, rule)
+        return rule
+
+    def create_ipobj(self, context, ipobj):
+        with context.session.begin(subtransactions=True):
+            ipobj = super(VShieldEdgeFWPlugin, self).create_ipobj(context, ipobj)
+            self.vsefw.create_ipset(context, ipobj)
+        return ipobj
+
+    def delete_ipobj(self, context, id):
+        with context.session.begin(subtransactions=True):
+            ipobj = self.get_ipobj(context, id)
+            self.vsefw.delete_ipset(context, ipobj)
+            super(VShieldEdgeFWPlugin, self).delete_ipobj(context, id)
+
+    def create_serviceobj(self, context, serviceobj):
+        with context.session.begin(subtransactions=True):
+            svcobj = super(VShieldEdgeFWPlugin, self).create_serviceobj(context, serviceobj)
+            print svcobj
+            self.vsefw.create_application(context, svcobj)
+        return svc
+
+    def delete_serviceobj(self, context, id):
+        with context.session.begin(subtransactions=True):
+            svcobj = self.get_serviceobj(context, id)
+            self.vsefw.delete_application(context, svcobj)
+            super(VShieldEdgeFWPlugin, self).delete_serviceobj(context, id)
+
