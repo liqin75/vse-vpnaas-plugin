@@ -27,6 +27,7 @@ from lbapi import LoadBalancerAPI
 
 LOG = logging.getLogger(__name__)
 
+
 class LoadBalancerPlugin(loadbalancer_db.LoadBalancerPluginDb):
 
     """
@@ -43,7 +44,8 @@ class LoadBalancerPlugin(loadbalancer_db.LoadBalancerPluginDb):
         Do the initialization for the loadbalancer service plugin here.
         """
         # Hard coded for now
-        vseapi = VseAPI('https://fank-dev4.eng.vmware.com', 'admin', 'default', 'edge-9', 'vse-kvm-instance')
+        vseapi = VseAPI('https://fank-dev4.eng.vmware.com',
+                        'admin', 'default', 'edge-9', 'vse-kvm-instance')
         self.vselb = LoadBalancerAPI(vseapi)
         qdbapi.register_models(base=model_base.BASEV2)
 
@@ -94,9 +96,9 @@ class LoadBalancerPlugin(loadbalancer_db.LoadBalancerPluginDb):
         return v_rt
 
     def delete_vip(self, context, id):
-	with context.session.begin(subtransactions=True):
+        with context.session.begin(subtransactions=True):
             vip = self.get_vip(context, id)
-            uuid2vseid =  self.vselb.get_vip_vseid(context, vip['id'])
+            uuid2vseid = self.vselb.get_vip_vseid(context, vip['id'])
             self.update_status(context, loadbalancer_db.Vip, id,
                                constants.PENDING_DELETE)
             LOG.debug(_("Delete vip: %s"), id)
@@ -222,7 +224,8 @@ class LoadBalancerPlugin(loadbalancer_db.LoadBalancerPluginDb):
                 constants.PENDING_DELETE, constants.ERROR]:
                 raise loadbalancer.StateInvalid(id=id,
                                                 state=m_query['status'])
-            m = super(LoadBalancerPlugin, self).update_member(context, id, member)
+            m = super(LoadBalancerPlugin, self).update_member(
+                context, id, member)
             self.update_status(context, loadbalancer_db.Member, id,
                                constants.PENDING_UPDATE)
             LOG.debug(_("Update member: %s"), m['id'])

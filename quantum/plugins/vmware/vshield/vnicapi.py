@@ -2,6 +2,7 @@
 
 import json
 
+
 class VNicAPI():
 
     def __init__(self, vse):
@@ -28,6 +29,7 @@ class VNicAPI():
         for vnic in vnics:
             request['vnics'].append(self.convert(vnic))
 
-        uri = '/api/3.0/edges/{}/vnics/?action=patch'.format(self.vse.get_edgeId())
+        uri = '/api/3.0/edges/{}/vnics/?action=patch'.format(
+            self.vse.get_edgeId())
         content = self.vse.api('POST', uri, request)
         print "VNicAPI.preconfig: '{}'".format(content)
