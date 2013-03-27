@@ -11,7 +11,7 @@ class VseAPI():
         self.edgeId = edgeId
         self.configId = 0
 
-    def vsmconfig(self, method, uri, params=None):
+    def vsmconfig(self, method, uri, params=None, **kwargs):
         print "VseAPI('{}', '{}', '{}')".format(
             method, uri, json.dumps(params))
         header, content = self.vsmapi.api(method, uri, params)
@@ -21,7 +21,9 @@ class VseAPI():
             raise Exception(json.dumps(header) + "\n" + content)
         if content == '':
             return header, {}
-        return header, json.loads(content)
+        if kwargs.get('decode', True):
+            content = json.loads(content)
+        return header, content
 
     def api(self, method, uri, params=None):
         header, content = self.vsmconfig(method, uri, params)
