@@ -9,12 +9,14 @@ from quantum.db import api as qdbapi
 from quantum.db import model_base
 from quantum.db.loadbalancer.loadbalancer_db import Pool
 
+
 class PoolUuid2Vseid(model_base.BASEV2):
     __tablename__ = 'pooluuid2vseid'
     uuid = sa.Column(sa.String(36),
                      sa.ForeignKey("pools.id", ondelete='CASCADE'),
                      primary_key=True)
     vseid = sa.Column(sa.Integer, nullable=False)
+
 
 class VipUuid2Vseid(model_base.BASEV2):
     __tablename__ = 'vipuuid2vseid'
@@ -23,6 +25,7 @@ class VipUuid2Vseid(model_base.BASEV2):
                      primary_key=True)
     vseid = sa.Column(sa.Integer, nullable=False)
 
+
 def getuuid2vseid(context, uuid, model):
     query = context.session.query(model)
     query = query.filter(model.uuid == uuid)
@@ -30,27 +33,33 @@ def getuuid2vseid(context, uuid, model):
         return None
     return query.one()
 
+
 def uuid2vseid(context, uuid, model):
     uuid2vseid = getuuid2vseid(context, uuid, model)
     if uuid2vseid is None:
         return None
     return uuid2vseid.vseid
 
+
 def deluuid2vseid(context, uuid, model):
     uuid2vseid = getuuid2vseid(context, uuid, model)
     if uuid2vseid is None:
-        raise Exception("{} id for {} not found".format(model.__name__, uuid))
+        raise Exception("{0} id for {1} not found".format(
+            model.__name__, uuid))
     context.session.delete(uuid2vseid)
+
 
 def getobj(context, model, id):
     query = context.session.query(model)
     return query.filter(model.id == id).one()
 
-class LoadBalancerAPI():
 
+class LoadBalancerAPI():
     def __init__(self, vse):
         qdbapi.register_models(base=model_base.BASEV2)
         self.vse = vse
+        self.uriprefix = '/api/3.0/edges/{0}/loadbalancer'.format(
+            vse.get_edgeId())
 
     def lbaas2vsmPool(self, pool):
         vsepool = {
@@ -75,7 +84,7 @@ class LoadBalancerAPI():
         print vip
         vseid = uuid2vseid(context, vip['pool_id'], PoolUuid2Vseid)
         if vseid is None:
-            raise Exception("pool id for {} not found".format(vip['pool_id']))
+            raise Exception("pool id for {0} not found".format(vip['pool_id']))
         vs = {
             'name': vip['name'],
             'ipAddress': vip['address'],
@@ -103,10 +112,10 @@ class LoadBalancerAPI():
             print "no member. skip pool created"
             return None
         request = self.lbaas2vsmPool(pool)
-        uri = '/api/3.0/edges/{}/loadbalancer/config/pools'.format(self.vse.get_edgeId())
+        uri = self.uriprefix + '/config/pools'
         response = self.vse.vsmconfig('POST', uri, request)
-        # currently no way to just do enable, so check if LB is enabled on VSM, if not, do
-        # a reconfigure
+        # currently no way to just do enable, so check if LB is enabled on
+        # VSM, if not, do a reconfigure
         config = self.get_vsm_lb_config()
         if not config['enabled']:
             config['enabled'] = True
@@ -115,14 +124,14 @@ class LoadBalancerAPI():
         self.vse.vsm2os()
         uuid2vseid = PoolUuid2Vseid(uuid=pool['id'], vseid=response['id'])
         context.session.add(uuid2vseid)
-        print "create_pool: response '{}'".format(response)
+        print "create_pool: response '{0}'".format(response)
         return response
 
     def update_pool(self, context, pool):
         vseid = uuid2vseid(context, pool['id'], PoolUuid2Vseid)
         if vseid is None:
-            raise Exception("pool id for {} not found".format(pool['id']))
-        uri = '/api/3.0/edges/{}/loadbalancer/config/pools/{}'.format(self.vse.get_edgeId(), vseid)
+            raise Exception("pool id for {0} not found".format(pool['id']))
+        uri = self.uriprefix + '/config/pools/{0}'.format(vseid)
         request = self.lbaas2vsmPool(pool)
         response = self.vse.api('PUT', uri, request)
         return response
@@ -130,13 +139,13 @@ class LoadBalancerAPI():
     def delete_pool(self, context, pool):
         vseid = pool['vseid']
         if vseid is None:
-            raise Exception("pool id for {} not found".format(pool['id']))
-        uri = '/api/3.0/edges/{}/loadbalancer/config/pools/{}'.format(self.vse.get_edgeId(), vseid)
+            raise Exception("pool id for {0} not found".format(pool['id']))
+        uri = self.uriprefix + '/config/pools/{0}'.format(vseid)
         response = self.vse.api('DELETE', uri)
         return response
 
     def __update_pool(self, context, pool):
-        vseid = uuid2vseid(context,pool['id'], PoolUuid2Vseid)
+        vseid = uuid2vseid(context, pool['id'], PoolUuid2Vseid)
         if vseid is None:
             return self.create_pool(context, pool)
         return self.update_pool(context, pool)
@@ -161,7 +170,7 @@ class LoadBalancerAPI():
         return self.__update_member_pool(context, member)
 
     def create_vip(self, context, vip):
-        uri = '/api/3.0/edges/{}/loadbalancer/config/virtualservers'.format(self.vse.get_edgeId())
+        uri = self.uriprefix + '/config/virtualservers'
         request = self.lbaas2vsmVS(context, vip)
         response = self.vse.api('POST', uri, request)
         uuid2vseid = VipUuid2Vseid(uuid=vip['id'], vseid=response['id'])
@@ -171,9 +180,10 @@ class LoadBalancerAPI():
     def update_vip(self, context, vip):
         vseid = uuid2vseid(context, vip['id'], VipUuid2Vseid)
         if vseid is None:
-            raise Exception("virtualserver id for {} not found".format(vip['id']))
+            raise Exception("virtualserver id for {0} not found".format(
+                vip['id']))
         request = self.lbaas2vsmVS(context, vip)
-        uri = '/api/3.0/edges/{}/loadbalancer/config/virtualservers/{}'.format(self.vse.get_edgeId(), vseid)
+        uri = self.uriprefix + '/config/virtualservers/{0}'.format(vseid)
         request = self.quantum2VSM(vs, self.VirtualServerAttrs)
         response = self.vse.api('PUT', uri, request)
         return response
@@ -181,17 +191,16 @@ class LoadBalancerAPI():
     def delete_vip(self, context, vip):
         vseid = vip['vseid']
         if vseid is None:
-            raise Exception("virtualserver id for {} not found".format(vip['id']))
-        uri = '/api/3.0/edges/{}/loadbalancer/config/virtualservers/{}'.format(self.vse.get_edgeId(), vseid)
+            raise Exception("virtualserver id for {0} not found".format(
+                vip['id']))
+        uri = self.uriprefix + '/config/virtualservers/{0}'.format(vseid)
         response = self.vse.api('DELETE', uri)
         return response
 
     def get_vsm_lb_config(self):
-        uri = '/api/3.0/edges/{}/loadbalancer/config'.format(self.vse.get_edgeId())
+        uri = self.uriprefix + '/config'
         return self.vse.api('GET', uri)
 
-
     def __reconfigure(self, config):
-        uri = '/api/3.0/edges/{}/loadbalancer/config'.format(self.vse.get_edgeId())
+        uri = self.uriprefix + '/config'
         self.vse.vsmconfig('PUT', uri, config)
-

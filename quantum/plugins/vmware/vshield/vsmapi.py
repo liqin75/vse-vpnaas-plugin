@@ -4,6 +4,7 @@ import httplib2
 import json
 import base64
 
+
 class VsmAPI():
 
     def __init__(self, url, user, password):
@@ -14,15 +15,16 @@ class VsmAPI():
         return {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorization' : 'Basic ' + self.authToken
+            'Authorization': 'Basic ' + self.authToken
         }
 
     def api(self, method, uri, params=None):
         url = self.url + uri
         http = httplib2.Http()
-        http.disable_ssl_certificate_validation=True
+        http.disable_ssl_certificate_validation = True
         if params:
-            return http.request(url, method, body=json.dumps(params), headers=self._useHeaders())
+            return http.request(
+                url, method, body=json.dumps(params),
+                headers=self._useHeaders())
         else:
             return http.request(url, method, headers=self._useHeaders())
-
