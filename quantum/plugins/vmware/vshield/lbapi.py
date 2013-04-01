@@ -15,7 +15,7 @@ class PoolUuid2Vseid(model_base.BASEV2):
     uuid = sa.Column(sa.String(36),
                      sa.ForeignKey("pools.id", ondelete='CASCADE'),
                      primary_key=True)
-    vseid = sa.Column(sa.Integer, nullable=False)
+    vseid = sa.Column(sa.String(36), nullable=False)
 
 
 class VipUuid2Vseid(model_base.BASEV2):
@@ -23,7 +23,7 @@ class VipUuid2Vseid(model_base.BASEV2):
     uuid = sa.Column(sa.String(36),
                      sa.ForeignKey("vips.id", ondelete='CASCADE'),
                      primary_key=True)
-    vseid = sa.Column(sa.Integer, nullable=False)
+    vseid = sa.Column(sa.String(36), nullable=False)
 
 
 def getuuid2vseid(context, uuid, model):
@@ -58,10 +58,12 @@ class LoadBalancerAPI():
     def __init__(self, vse):
         qdbapi.register_models(base=model_base.BASEV2)
         self.vse = vse
-        self.uriprefix = '/api/3.0/edges/{0}/loadbalancer'.format(
+#        self.uriprefix = '/api/3.0/edges/{0}/loadbalancer'.format(
+        self.uriprefix = '/api/4.0/edges/{0}/loadbalancer'.format(
             vse.get_edgeId())
+        self.enabled = False
 
-    def lbaas2vsmPool(self, pool):
+    def lbaas2vsmPoolv3(self, pool):
         vsepool = {
             'name': pool['name'],
             'servicePorts': [{
@@ -75,12 +77,25 @@ class LoadBalancerAPI():
                 'ipAddress': member['address'],
                 'servicePortList': [{
                     'protocol': pool['protocol'],
-                    'port': member['port']
+                    'port': member['protocol_port']
                 }]
             })
         return vsepool
 
-    def lbaas2vsmVS(self, context, vip):
+    def lbaas2vsmPool(self, pool):
+        vsepool = {
+            'name': pool['name'],
+            'algorithm': pool['lb_method'],
+            'member': []
+        }
+        for member in pool['members']:
+            vsepool['member'].append({
+                'ipAddress': member['address'],
+                'port': member['protocol_port']
+            })
+        return vsepool
+
+    def lbaas2vsmVSv3(self, context, vip):
         print vip
         vseid = uuid2vseid(context, vip['pool_id'], PoolUuid2Vseid)
         if vseid is None:
@@ -95,6 +110,19 @@ class LoadBalancerAPI():
             'pool': {
                 'id': vseid
             }
+        }
+        return vs
+
+    def lbaas2vsmVS(self, context, vip):
+        vseid = uuid2vseid(context, vip['pool_id'], PoolUuid2Vseid)
+        if vseid is None:
+            raise Exception("pool id for {0} not found".format(vip['pool_id']))
+        vs = {
+            'name': vip['name'],
+            'ipAddress': vip['address'],
+            'protocol': vip['protocol'],
+            'port': vip['protocol_port'],
+            'defaultPoolId': vseid
         }
         return vs
 
@@ -113,16 +141,19 @@ class LoadBalancerAPI():
             return None
         request = self.lbaas2vsmPool(pool)
         uri = self.uriprefix + '/config/pools'
-        response = self.vse.vsmconfig('POST', uri, request)
+        header, response = self.vse.vsmconfig('POST', uri, request)
+        objuri = header['location']
+        poolId = objuri[objuri.rfind("/")+1:]
         # currently no way to just do enable, so check if LB is enabled on
         # VSM, if not, do a reconfigure
-        config = self.get_vsm_lb_config()
-        if not config['enabled']:
-            config['enabled'] = True
-            self.__reconfigure(config)
+        if not self.enabled:
+            config = self.get_vsm_lb_config()
+            if not config['enabled']:
+                config['enabled'] = True
+                self.__reconfigure(config)
+                self.enabled = True
 
-        self.vse.vsm2os()
-        uuid2vseid = PoolUuid2Vseid(uuid=pool['id'], vseid=response['id'])
+        uuid2vseid = PoolUuid2Vseid(uuid=pool['id'], vseid=poolId)
         context.session.add(uuid2vseid)
         print "create_pool: response '{0}'".format(response)
         return response
@@ -137,11 +168,17 @@ class LoadBalancerAPI():
         return response
 
     def delete_pool(self, context, pool):
-        vseid = pool['vseid']
+        vseid = uuid2vseid(context, pool['id'], PoolUuid2Vseid)
         if vseid is None:
-            raise Exception("pool id for {0} not found".format(pool['id']))
+            print "VSM pool obj not exist for {0}".format(pool['id'])
+            return
         uri = self.uriprefix + '/config/pools/{0}'.format(vseid)
-        response = self.vse.api('DELETE', uri)
+        response = None
+        try:
+            header, response = self.vse.vsmconfig('DELETE', uri)
+        except Exception:
+            pass
+        deluuid2vseid(context, pool['id'], PoolUuid2Vseid)
         return response
 
     def __update_pool(self, context, pool):
@@ -172,8 +209,10 @@ class LoadBalancerAPI():
     def create_vip(self, context, vip):
         uri = self.uriprefix + '/config/virtualservers'
         request = self.lbaas2vsmVS(context, vip)
-        response = self.vse.api('POST', uri, request)
-        uuid2vseid = VipUuid2Vseid(uuid=vip['id'], vseid=response['id'])
+        header, response = self.vse.vsmconfig('POST', uri, request)
+        objuri = header['location']
+        vsId = objuri[objuri.rfind("/")+1:]
+        uuid2vseid = VipUuid2Vseid(uuid=vip['id'], vseid=vsId)
         context.session.add(uuid2vseid)
         return response
 

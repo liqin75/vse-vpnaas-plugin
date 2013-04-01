@@ -14,19 +14,17 @@ class VseAPI():
     def vsmconfig(self, method, uri, params=None):
         print "VseAPI('{}', '{}', '{}')".format(
             method, uri, json.dumps(params))
-        resp, content = self.vsmapi.api(method, uri, params)
-        print "header: '{}'".format(resp)
+        header, content = self.vsmapi.api(method, uri, params)
+        print "header: '{}'".format(header)
         print "content: '{}'".format(content)
-        if int(resp['status']) / 100 != 2:
-            raise Exception(json.dumps(resp) + "\n" + content)
+        if int(header['status']) / 100 != 2:
+            raise Exception(json.dumps(header) + "\n" + content)
         if content == '':
-            return {}
-        return json.loads(content)
+            return header, {}
+        return header, json.loads(content)
 
     def api(self, method, uri, params=None):
-        content = self.vsmconfig(method, uri, params)
-        if method.upper() is not "GET":
-            self.vsm2os()
+        header, content = self.vsmconfig(method, uri, params)
         return content
 
     def get_edgeId(self):
