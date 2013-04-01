@@ -27,7 +27,7 @@ from lbapi import LoadBalancerAPI
 
 LOG = logging.getLogger(__name__)
 
-edgeUri = 'http://fank-dev2.eng.vmware.com'
+edgeUri = 'https://fank-dev2.eng.vmware.com'
 edgeId = 'edge-24'
 edgeUser = 'admin'
 edgePasswd = 'default'
@@ -61,7 +61,7 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
 
     def create_vip(self, context, vip):
         with context.session.begin(subtransactions=True):
-            v = super(LoadBalancerPlugin, self).create_vip(context, vip)
+            v = super(VShieldEdgeLBPlugin, self).create_vip(context, vip)
             self.update_status(context, loadbalancer_db.Vip, v['id'],
                                constants.PENDING_CREATE)
             LOG.debug(_("Create vip: %s") % v['id'])
@@ -88,7 +88,7 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
                 raise loadbalancer.StateInvalid(id=id,
                                                 state=v_query['status'])
 
-            v = super(LoadBalancerPlugin, self).update_vip(context, id, vip)
+            v = super(VShieldEdgeLBPlugin, self).update_vip(context, id, vip)
             self.update_status(context, loadbalancer_db.Vip, id,
                                constants.PENDING_UPDATE)
             LOG.debug(_("Update vip: %s"), id)
@@ -107,24 +107,24 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
                                constants.PENDING_DELETE)
             LOG.debug(_("Delete vip: %s"), id)
 
-            super(LoadBalancerPlugin, self).delete_vip(context, id)
+            super(VShieldEdgeLBPlugin, self).delete_vip(context, id)
             vip['vseid'] = uuid2vseid
             self.vselb.delete_vip(context, vip)
 
     def get_vip(self, context, id, fields=None):
-        res = super(LoadBalancerPlugin, self).get_vip(context, id, fields)
+        res = super(VShieldEdgeLBPlugin, self).get_vip(context, id, fields)
         LOG.debug(_("Get vip: %s"), id)
         return res
 
     def get_vips(self, context, filters=None, fields=None):
-        res = super(LoadBalancerPlugin, self).get_vips(
+        res = super(VShieldEdgeLBPlugin, self).get_vips(
             context, filters, fields)
         LOG.debug(_("Get vips"))
         return res
 
     def create_pool(self, context, pool):
         with context.session.begin(subtransactions=True):
-            p = super(LoadBalancerPlugin, self).create_pool(context, pool)
+            p = super(VShieldEdgeLBPlugin, self).create_pool(context, pool)
             self.update_status(context, loadbalancer_db.Pool, p['id'],
                                constants.PENDING_CREATE)
             LOG.debug(_("Create pool: %s"), p['id'])
@@ -145,7 +145,7 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
                 constants.PENDING_DELETE, constants.ERROR]:
                 raise loadbalancer.StateInvalid(id=id,
                                                 state=p_query['status'])
-            p = super(LoadBalancerPlugin, self).update_pool(context, id, pool)
+            p = super(VShieldEdgeLBPlugin, self).update_pool(context, id, pool)
             LOG.debug(_("Update pool: %s"), p['id'])
             self.vselb.update_pool(context, pool)
 
@@ -155,63 +155,61 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
     def delete_pool(self, context, id):
         with context.session.begin(subtransactions=True):
             pool = self.get_pool(context, id)
-            uuid2vseid = self.vselb.get_pool_vseid(context, id)
             self.update_status(context, loadbalancer_db.Pool, id,
                                constants.PENDING_DELETE)
-            super(LoadBalancerPlugin, self).delete_pool(context, id)
-            LOG.debug(_("Delete pool: %s"), id)
-            pool['vseid'] = uuid2vseid
             self.vselb.delete_pool(context, pool)
+            super(VShieldEdgeLBPlugin, self).delete_pool(context, id)
+            LOG.debug(_("Delete pool: %s"), id)
 
     def get_pool(self, context, id, fields=None):
-        res = super(LoadBalancerPlugin, self).get_pool(context, id, fields)
+        res = super(VShieldEdgeLBPlugin, self).get_pool(context, id, fields)
         LOG.debug(_("Get pool: %s"), id)
         return res
 
     def get_pools(self, context, filters=None, fields=None):
-        res = super(LoadBalancerPlugin, self).get_pools(
+        res = super(VShieldEdgeLBPlugin, self).get_pools(
             context, filters, fields)
         LOG.debug(_("Get Pools"))
         return res
 
     def stats(self, context, pool_id):
-        res = super(LoadBalancerPlugin, self).get_stats(context, pool_id)
+        res = super(VShieldEdgeLBPlugin, self).get_stats(context, pool_id)
         LOG.debug(_("Get stats of Pool: %s"), pool_id)
         return res
 
     def create_pool_health_monitor(self, context, health_monitor, pool_id):
-        m = super(LoadBalancerPlugin, self).create_pool_health_monitor(
+        m = super(VShieldEdgeLBPlugin, self).create_pool_health_monitor(
             context, health_monitor, pool_id)
         LOG.debug(_("Create health_monitor of pool: %s"), pool_id)
         return m
 
     def get_pool_health_monitor(self, context, id, pool_id, fields=None):
-        m = super(LoadBalancerPlugin, self).get_pool_health_monitor(
+        m = super(VShieldEdgeLBPlugin, self).get_pool_health_monitor(
             context, id, pool_id, fields)
         LOG.debug(_("Get health_monitor of pool: %s"), pool_id)
         return m
 
     def delete_pool_health_monitor(self, context, id, pool_id):
-        super(LoadBalancerPlugin, self).delete_pool_health_monitor(
+        super(VShieldEdgeLBPlugin, self).delete_pool_health_monitor(
             context, id, pool_id)
         LOG.debug(_("Delete health_monitor %(id)s of pool: %(pool_id)s"),
                   {"id": id, "pool_id": pool_id})
 
     def get_member(self, context, id, fields=None):
-        res = super(LoadBalancerPlugin, self).get_member(
+        res = super(VShieldEdgeLBPlugin, self).get_member(
             context, id, fields)
         LOG.debug(_("Get member: %s"), id)
         return res
 
     def get_members(self, context, filters=None, fields=None):
-        res = super(LoadBalancerPlugin, self).get_members(
+        res = super(VShieldEdgeLBPlugin, self).get_members(
             context, filters, fields)
         LOG.debug(_("Get members"))
         return res
 
     def create_member(self, context, member):
         with context.session.begin(subtransactions=True):
-            m = super(LoadBalancerPlugin, self).create_member(context, member)
+            m = super(VShieldEdgeLBPlugin, self).create_member(context, member)
             self.update_status(context, loadbalancer_db.Member, m['id'],
                                constants.PENDING_CREATE)
             LOG.debug(_("Create member: %s"), m['id'])
@@ -228,7 +226,7 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
                 constants.PENDING_DELETE, constants.ERROR]:
                 raise loadbalancer.StateInvalid(id=id,
                                                 state=m_query['status'])
-            m = super(LoadBalancerPlugin, self).update_member(
+            m = super(VShieldEdgeLBPlugin, self).update_member(
                 context, id, member)
             self.update_status(context, loadbalancer_db.Member, id,
                                constants.PENDING_UPDATE)
@@ -245,23 +243,23 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
             self.update_status(context, loadbalancer_db.Member, id,
                                constants.PENDING_DELETE)
             LOG.debug(_("Delete member: %s"), id)
-            super(LoadBalancerPlugin, self).delete_member(context, id)
+            super(VShieldEdgeLBPlugin, self).delete_member(context, id)
             self.vselb.delete_member(context, m)
 
     def get_health_monitor(self, context, id, fields=None):
-        res = super(LoadBalancerPlugin, self).get_health_monitor(
+        res = super(VShieldEdgeLBPlugin, self).get_health_monitor(
             context, id, fields)
         LOG.debug(_("Get health_monitor: %s"), id)
         return res
 
     def get_health_monitors(self, context, filters=None, fields=None):
-        res = super(LoadBalancerPlugin, self).get_health_monitors(
+        res = super(VShieldEdgeLBPlugin, self).get_health_monitors(
             context, filters, fields)
         LOG.debug(_("Get health_monitors"))
         return res
 
     def create_health_monitor(self, context, health_monitor):
-        h = super(LoadBalancerPlugin, self).create_health_monitor(
+        h = super(VShieldEdgeLBPlugin, self).create_health_monitor(
             context, health_monitor)
         self.update_status(context, loadbalancer_db.HealthMonitor, h['id'],
                            constants.PENDING_CREATE)
@@ -276,7 +274,7 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
             constants.PENDING_DELETE, constants.ERROR]:
             raise loadbalancer.StateInvalid(id=id,
                                             state=h_query['status'])
-        h = super(LoadBalancerPlugin, self).update_health_monitor(
+        h = super(VShieldEdgeLBPlugin, self).update_health_monitor(
             context, id, health_monitor)
         self.update_status(context, loadbalancer_db.HealthMonitor, id,
                            constants.PENDING_UPDATE)
@@ -289,4 +287,4 @@ class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
         self.update_status(context, loadbalancer_db.HealthMonitor, id,
                            constants.PENDING_DELETE)
         LOG.debug(_("Delete health_monitor: %s"), id)
-        super(LoadBalancerPlugin, self).delete_health_monitor(context, id)
+        super(VShieldEdgeLBPlugin, self).delete_health_monitor(context, id)
