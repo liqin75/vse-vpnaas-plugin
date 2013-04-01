@@ -2,16 +2,13 @@
 
 import json
 from vsmapi import VsmAPI
-from osapi import OpenstackAPI
 
 
 class VseAPI():
 
-    def __init__(self, address, user, password, edgeId, edgeInstance):
+    def __init__(self, address, user, password, edgeId):
         self.vsmapi = VsmAPI(address, user, password)
-        self.osapi = OpenstackAPI('10.34.95.154', 'admin', 'admin', 'password')
         self.edgeId = edgeId
-        self.edgeInstance = edgeInstance
         self.configId = 0
 
     def vsmconfig(self, method, uri, params=None):
@@ -25,13 +22,6 @@ class VseAPI():
         if content == '':
             return {}
         return json.loads(content)
-
-    def vsm2os(self):
-        config = self.get_vse_config()
-        self.configId = self.configId + 1
-        self.osapi.inject_file(
-            self.edgeInstance,
-            '/root/vSEdge/os-inject/config.json', self.configId, config)
 
     def api(self, method, uri, params=None):
         content = self.vsmconfig(method, uri, params)
