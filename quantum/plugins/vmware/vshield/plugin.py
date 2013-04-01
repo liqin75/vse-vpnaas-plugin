@@ -27,8 +27,13 @@ from lbapi import LoadBalancerAPI
 
 LOG = logging.getLogger(__name__)
 
+edgeUri = 'http://fank-dev2.eng.vmware.com'
+edgeId = 'edge-24'
+edgeUser = 'admin'
+edgePasswd = 'default'
 
-class LoadBalancerPlugin(loadbalancer_db.LoadBalancerPluginDb):
+
+class VShieldEdgeLBPlugin(loadbalancer_db.LoadBalancerPluginDb):
 
     """
     Implementation of the Quantum Loadbalancer Service Plugin.
@@ -44,8 +49,7 @@ class LoadBalancerPlugin(loadbalancer_db.LoadBalancerPluginDb):
         Do the initialization for the loadbalancer service plugin here.
         """
         # Hard coded for now
-        vseapi = VseAPI('https://fank-dev4.eng.vmware.com',
-                        'admin', 'default', 'edge-9', 'vse-kvm-instance')
+        vseapi = VseAPI(edgeUri, edgeUser, edgePasswd, edgeId)
         self.vselb = LoadBalancerAPI(vseapi)
         qdbapi.register_models(base=model_base.BASEV2)
 
