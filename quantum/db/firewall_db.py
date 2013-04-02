@@ -81,27 +81,16 @@ class RuleServiceConfig(model_base.BASEV2):
                         sa.ForeignKey('rules.id',
                         ondelete="CASCADE"))
     protocol = sa.Column(sa.String(16), nullable=False)
-    ports = sa.Column(sa.Text())
+    values = sa.Column(sa.Text())
     sourcePorts = sa.Column(sa.Text())
-    types = sa.Column(sa.String(255))
-
-class ServiceConfig(model_base.BASEV2):
-    id = sa.Column(sa.Integer, autoincrement=True, primary_key=True)
-    serviceobj_id = sa.Column(sa.String(36),
-                              sa.ForeignKey('serviceobjs.id',
-                                            ondelete="CASCADE"))
-    protocol = sa.Column(sa.String(16), nullable=False)
-    ports = sa.Column(sa.Text())
-    sourcePorts = sa.Column(sa.Text())
-    types = sa.Column(sa.String(255))
 
 
 class ServiceObj(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     name = sa.Column(sa.String(255))
     description = sa.Column(sa.String(255))
-    value = orm.relationship(ServiceConfig,
-                             uselist=True,
-                             cascade="all, delete-orphan")
+    protocol = sa.Column(sa.String(16), nullable=False)
+    values = sa.Column(sa.Text())
+    sourcePorts = sa.Column(sa.Text())
 
 
 class ZoneNetwork(model_base.BASEV2):
@@ -390,9 +379,8 @@ class FirewallPluginDb(FirewallPluginBase):
                     svcdict = self._dict2serviceobj(service)
                     svcCfg = RuleServiceConfig(
                         protocol=svcdict['protocol'],
-                        ports=svcdict['ports'],
-                        sourcePorts=svcdict['sourcePorts'],
-                        types=svcdict['types']
+                        values=svcdict['values'],
+                        sourcePorts=svcdict['sourcePorts']
                     )
                     rule_db.serviceConfig.append(svcCfg)
             if svc.get('serviceobjs'):
@@ -562,71 +550,62 @@ class FirewallPluginDb(FirewallPluginBase):
                 IPObj.tenant_id == tenant_id, IPObj.id == id).one()
             context.session.delete(ipobj_db)
 
+    def _serviceobj2dict_convert(self, svcobj, svcdict):
+        if svcobj['protocol'].lower() == "icmp":
+           svcdict['types'] = json.loads(svcobj['values'])
+        else:
+           svcdict['ports'] = json.loads(svcobj['values'])
+
+        attrs = ['sourcePorts']
+        for attr in attrs:
+            if attr in svcobj:
+                svcdict[attr] = json.loads(svcobj[attr])
+
     def _make_serviceobj_dict(self, svcobj, fields=None):
         res = {
             'id': svcobj['id'],
             'name': svcobj.get('name'),
-            'description': svcobj.get('description')
+            'description': svcobj.get('description'),
+            'protocol': svcobj['protocol']
         }
-        value = []
-        for svc in svcobj.get('value'):
-            service = {}
-            service['protocol'] = svc['protocol']
-            attrs = ['ports', 'sourcePorts', 'types']
-            self._get_optional_attrs(service, svc, attrs)
-            for attr in attrs:
-                if service.get(attr):
-                    service[attr] = json.loads(service[attr])
-            value.append(service)
+        self._serviceobj2dict_convert(svcobj, res)
 
-        res['value'] = value
         return self._fields(res, fields)
 
-    def _dict2serviceobj(self, jsontxt):
-        protocol = jsontxt['protocol']
-        ports = jsontxt.get('ports')
-        if ports:
-            ports = json.dumps(ports)
-        sourcePorts = jsontxt.get('sourcePorts')
-        if sourcePorts:
-            sourcePorts = json.dumps(sourcePorts)
-        types = jsontxt.get('types')
-        if types:
-            types = json.dumps(types)
-
-        svcdict = {
-            'protocol': protocol,
-            'ports': ports,
-            'sourcePorts': sourcePorts,
-            'types': types
+    def _dict2serviceobj(self, svcdict):
+        svcobj = {
+            'name': svcdict['name'],
+            'description': svcdict.get('description'),
+            'protocol': svcdict['protocol']
         }
-        return svcdict
+        if svcdict['protocol'].lower() == "icmp":
+            svcobj['values'] = json.dumps(svcdict['types'])
+        else:
+            svcobj['values'] = json.dumps(svcdict['ports'])
+        attrs = ['sourcePorts']
+        for attr in attrs:
+            if attr in svcdict:
+                svcobj[attr] = json.dumps(svcdict[attr])
+        return svcobj
 
     def _serviceobj2dict(self, svcobj):
         svcdict = {}
-        attrs = ['ports', 'sourcePorts', 'types']
         svcdict['protocol'] = svcobj['protocol']
-        for attr in attrs:
-            if attr in svcobj:
-                svcdict[attr] = json.loads(svcobj[attr])
+        self._serviceobj2dict_convert(svcobj, svcdict)
         return svcdict
 
     def create_serviceobj(self, context, serviceobj):
         body = serviceobj['serviceobj']
         with context.session.begin(subtransactions=True):
+            svcobj = self._dict2serviceobj(body)
             svcobj_db = ServiceObj(id=uuidutils.generate_uuid(),
                                    tenant_id=self._get_tenant_id_for_create(
                                        context, body),
-                                   name=body['name'],
-                                   description=body['description'])
-            svcobj_db.value = []
-            for service in body['value']:
-                svcdict = self._dict2serviceobj(service)
-                svcCfg = ServiceConfig(protocol=svcdict['protocol'],
-                                       ports=svcdict['ports'],
-                                       sourcePorts=svcdict['sourcePorts'],
-                                       types=svcdict['types'])
-                svcobj_db.value.append(svcCfg)
+                                   name=svcobj['name'],
+                                   description=svcobj['description'],
+                                   protocol=svcobj['protocol'],
+                                   values=svcobj.get('values'),
+                                   sourcePorts=svcobj.get('sourcePorts'))
             context.session.add(svcobj_db)
 
         return self._make_serviceobj_dict(svcobj_db)
@@ -635,8 +614,7 @@ class FirewallPluginDb(FirewallPluginBase):
         tenant_id = self._get_tenant_id_for_create(context)
         svcobjs = []
         with context.session.begin(subtransactions=True):
-            query = context.session.query(ServiceObj).options(
-                orm.subqueryload(ServiceObj.value)).filter(
+            query = context.session.query(ServiceObj).filter(
                 ServiceObj.tenant_id == tenant_id)
             svcobjs_db = query.all()
             for svcobj_db in svcobjs_db:
@@ -646,8 +624,7 @@ class FirewallPluginDb(FirewallPluginBase):
     def get_serviceobj(self, context, id, fields=None):
         tenant_id = self._get_tenant_id_for_create(context)
         with context.session.begin(subtransactions=True):
-            svcobj_db = context.session.query(ServiceObj).options(
-                orm.subqueryload(ServiceObj.value)).filter(
+            svcobj_db = context.session.query(ServiceObj).filter(
                 ServiceObj.tenant_id == tenant_id, ServiceObj.id == id).one()
             svcobj = self._make_serviceobj_dict(svcobj_db)
         return svcobj

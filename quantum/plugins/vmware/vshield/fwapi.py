@@ -58,7 +58,7 @@ def list2str(value):
         return ""
     rstr = ""
     for v in value:
-        rstr = rstr + "," + v
+        rstr = rstr + ",{0}".format(v)
     return rstr[1:]
 
 
@@ -148,7 +148,7 @@ class FirewallAPI():
 
     def create_ipset(self, context, ipobj):
         request = self.fwaas2vsmIpset(ipobj)
-        uri = self.ipseturi + "/{}".format(self.vse.get_edgeId())
+        uri = self.ipseturi + "/{0}".format(self.vse.get_edgeId())
         header, response = self.vse.vsmconfig('POST', uri, request, decode=False)
         objuri = header['location']
         ipsetId = objuri[objuri.rfind("/")+1:]
@@ -158,7 +158,7 @@ class FirewallAPI():
 
     def delete_ipset(self, context, ipobj):
         ipsetId = uuid2vseid(context, ipobj['id'], IPObjUuid2Vseid)
-        uri = self.ipseturi + "/{}".format(ipsetId)
+        uri = self.ipseturi + "/{0}".format(ipsetId)
         header, response = self.vse.vsmconfig('DELETE', uri)
 
     def fwaas2vsmApp(self, service):
@@ -181,17 +181,17 @@ class FirewallAPI():
 
     def create_application(self, context, svcobj):
         request = self.fwaas2vsmApp(svcobj)
-        uri = self.appuri + "/{}".format(self.vse.get_edgeId())
+        uri = self.appuri + "/{0}".format(self.vse.get_edgeId())
         header, response = self.vse.vsmconfig('POST', uri, request, decode=False)
         objuri = header['location']
         appId = objuri[objuri.rfind("/")+1:]
-        uuid2vseid = ServiceObjUuid2Vseid(uuid=ipobj['id'], vseid=appId)
+        uuid2vseid = ServiceObjUuid2Vseid(uuid=svcobj['id'], vseid=appId)
         context.session.add(uuid2vseid)
         return response
 
     def delete_application(self, context, svcobj):
         appId = uuid2vseid(context, svcobj['id'], ServiceObjUuid2Vseid)
-        uri = self.appuri + "/{}".format(appId)
+        uri = self.appuri + "/{0}".format(appId)
         header, response = self.vse.vsmconfig('DELETE', uri)
 
 

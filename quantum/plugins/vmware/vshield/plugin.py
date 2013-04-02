@@ -332,9 +332,8 @@ class VShieldEdgeFWPlugin(fw_db.FirewallPluginDb):
     def create_serviceobj(self, context, serviceobj):
         with context.session.begin(subtransactions=True):
             svcobj = super(VShieldEdgeFWPlugin, self).create_serviceobj(context, serviceobj)
-            print svcobj
             self.vsefw.create_application(context, svcobj)
-        return svc
+        return svcobj
 
     def delete_serviceobj(self, context, id):
         with context.session.begin(subtransactions=True):
