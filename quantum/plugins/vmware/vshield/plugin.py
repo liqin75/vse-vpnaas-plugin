@@ -30,7 +30,7 @@ from fwapi import FirewallAPI
 LOG = logging.getLogger(__name__)
 
 edgeUri = 'https://fank-dev2.eng.vmware.com'
-edgeId = 'edge-24'
+edgeId = 'edge-27'
 edgeUser = 'admin'
 edgePasswd = 'default'
 
@@ -313,9 +313,17 @@ class VShieldEdgeFWPlugin(fw_db.FirewallPluginDb):
 
     def create_rule(self, context, rule):
         with context.session.begin(subtransactions=True):
+            print rule
             rule = super(VShieldEdgeFWPlugin, self).create_rule(context, rule)
+            print rule
             self.vsefw.create_rule(context, rule)
         return rule
+
+    def delete_rule(self, context, id):
+        with context.session.begin(subtransactions=True):
+            rule = self.get_rule(context, id)
+            self.vsefw.delete_rule(context, rule)
+            super(VShieldEdgeFWPlugin, self).delete_rule(context, id)
 
     def create_ipobj(self, context, ipobj):
         with context.session.begin(subtransactions=True):
@@ -332,9 +340,8 @@ class VShieldEdgeFWPlugin(fw_db.FirewallPluginDb):
     def create_serviceobj(self, context, serviceobj):
         with context.session.begin(subtransactions=True):
             svcobj = super(VShieldEdgeFWPlugin, self).create_serviceobj(context, serviceobj)
-            print svcobj
             self.vsefw.create_application(context, svcobj)
-        return svc
+        return svcobj
 
     def delete_serviceobj(self, context, id):
         with context.session.begin(subtransactions=True):

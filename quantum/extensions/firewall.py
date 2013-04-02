@@ -98,8 +98,15 @@ RESOURCE_ATTRIBUTE_MAP = {
         'description': {'allow_post': True, 'allow_put': True,
                         'validate': {'type:string': None},
                         'is_visible': True, 'default': ''},
-        'value': {'allow_post': True, 'allow_put': True,
-                  'is_visible': True}
+        'protocol': {'allow_post': True, 'allow_put': True,
+                     'validate': {'type:string': None},
+                     'is_visible': True},
+        'ports': {'allow_post': True, 'allow_put': True,
+                  'is_visible': True, 'default': None},
+        'types': {'allow_post': True, 'allow_put': True,
+                  'is_visible': True, 'default': None},
+        'sourcePs': {'allow_post': True, 'allow_put': True,
+                     'is_visible': True, 'default': None}
     },
     'zones': {
         'id': {'allow_post': False, 'allow_put': False,
