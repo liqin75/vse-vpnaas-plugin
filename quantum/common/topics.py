@@ -26,10 +26,12 @@ AGENT = 'q-agent-notifier'
 PLUGIN = 'q-plugin'
 DHCP = 'q-dhcp-notifer'
 LOADBALANCER_PLUGIN = 'q-loadbalancer-plugin'
+VPN_PLUGIN = 'q-vpn-plugin'
 
 L3_AGENT = 'l3_agent'
 DHCP_AGENT = 'dhcp_agent'
 LOADBALANCER_AGENT = 'loadbalancer_agent'
+VPN_AGENT = 'vpn_agent'
 
 
 def get_topic_name(prefix, table, operation):
