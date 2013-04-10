@@ -15,6 +15,7 @@
 #    under the License.
 #
 
+import re
 from oslo.config import cfg
 import sqlalchemy as sa
 from sqlalchemy import exc as sa_exc
@@ -148,7 +149,28 @@ class VPNPluginDb(VPNPluginBase):
     ########################################################
     # Site DB access
     def _make_site_dict(self, site, fields=None):
-
+        """
+        pri_networks in db looks like
+        "192.168.1.0/24,192.168.2.0/24-192.168.11.0/24;
+        192.168.3.0/24-192.168.33.0/24,192.168.44.0/24"
+        and be convert to JSON as
+        'pri_networks' : [
+            {
+               'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+               'peer_subnets': "192.168.11.0/24"
+            },{
+               'local_subnets': "192.168.3.0/24",
+               'peer_subnets': "192.168.33.0/24,192.168.44.0/24"
+            }
+        ]
+        """
+        pri_networks = []
+        pairs = site['pri_networks'].split(";")
+        for pair in pairs:
+            match = re.search("(.*?)-(.*)", pair)
+            if match:
+               pri_networks.append({'local_subnets': match.group(1),
+                                    'peer_subnets': match.group(2)})        
         res = {'id': site['id'],
                'tenant_id': site['tenant_id'],
                'subnet_id': site['subnet_id'],
@@ -158,18 +180,28 @@ class VPNPluginDb(VPNPluginBase):
                'local_id': site['local_id'],
                'peer_endpoint': site['peer_endpoint'],
                'peer_id': site['peer_id'],
-               'pri_networks': site['pri_networks'],
+               'pri_networks': pri_networks,
                'psk': site['psk'],
                'mtu': site['mtu']}
 
         return self._fields(res, fields)
 
+    def _subnets_to_str(self, pri_networks):
+        res = ""
+        count = 0
+        for pair in pri_networks:
+            if (count > 0):
+                res += ';'
+            res += '{0}-{1}'.format(pair['local_subnets'], pair['peer_subnets'])
+            count += 1
+        return res
 
     def create_site(self, context, site):
         s = site['site']
         tenant_id = self._get_tenant_id_for_create(context, s)
 
         with context.session.begin(subtransactions=True):
+            pri_networks = self._subnets_to_str(s['pri_networks'])
             site_db = Site(id=uuidutils.generate_uuid(),
                          tenant_id=tenant_id,
                          subnet_id=s['subnet_id'],
@@ -179,7 +211,7 @@ class VPNPluginDb(VPNPluginBase):
                          peer_endpoint=s['peer_endpoint'],
                          local_id=s['local_id'],
                          peer_id=s['peer_id'],
-                         pri_networks=s['pri_networks'],
+                         pri_networks=pri_networks,
                          psk=s['psk'],
                          mtu=s['mtu'])
 

@@ -28,8 +28,8 @@ from vpnapi import VPNAPI
 
 LOG = logging.getLogger(__name__)
 
-edgeUri = 'https://10.117.35.15'
-edgeId = 'edge-20'
+edgeUri = 'https://10.117.35.99'
+edgeId = 'edge-1'
 edgeUser = 'admin'
 edgePasswd = 'default'
 
@@ -119,6 +119,11 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
         LOG.debug(_("Get sites"))
         return res
 
+    def stats(self, context, site_id):
+        site = self.get_site(context, site_id)
+        res = self.vsevpn.get_stats(context, site)
+        return res
+
     def get_isakmp_policys(self, context, filters=None, fields=None):
         LOG.debug(_("To be implemented"))
 
@@ -162,7 +167,4 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
         pass
 
     def delete_trust_profile(self, context, id):
-        pass
-
-    def stats(self, context, site_id):
         pass

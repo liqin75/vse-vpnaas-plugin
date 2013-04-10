@@ -82,10 +82,9 @@ class VPNAPI():
             'certificate': None,
             'authenticationMode': 'psk',
         }
-        match = re.search("(.*?)-(.*)", site['pri_networks'])
-        if match:
-           s['localSubnets']['subnets'] = match.group(1).split(",")
-           s['peerSubnets']['subnets'] = match.group(2).split(",")
+        for pair in site['pri_networks']:
+           s['localSubnets']['subnets'] = pair['local_subnets'].split(",")
+           s['peerSubnets']['subnets'] = pair['peer_subnets'].split(",")
         return s
 
 
@@ -128,6 +127,11 @@ class VPNAPI():
     def delete_site(self, context, site):
         uri = self.uriprefix + '/config'
         response = self.vse.api('DELETE', uri)
+        return response
+
+    def get_stats(self, context, site):
+        uri = self.uriprefix + '/statistics'
+        response = self.vse.api('GET', uri)
         return response
 
     def get_vsm_vpn_config(self):

@@ -109,7 +109,8 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
     def site(self, fmt=None, name='site1', subnet=None,
              local_endpoint='10.117.35.202', peer_endpoint='10.117.35.203',
              local_id='10.117.35.202', peer_id='10.117.35.203',
-             pri_networks='192.168.1.0/24-192.168.10.0/24',
+             pri_networks=[{'local_subnets':'192.168.1.0/24',
+                            'peer_subnets': '192.168.10.0/24'}],
              psk='123', mtu=1500, no_delete=False, **kwargs):
         if not fmt:
             fmt = self.fmt
@@ -140,7 +141,11 @@ class TestVPN(VPNPluginDbTestCase):
             'peer_id': "10.117.35.203",
             'psk': 'hello123',
             'mtu': 1500,
-            'pri_networks': "192.168.1.0/24,192.168.2.0/24-192.168.10.0/24,192.168.20.0/24",
+            'pri_networks': [{'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                              'peer_subnets': "192.168.10.0/24,192.168.20.0/24"},
+                             {'local_subnets': "192.168.3.0/24,192.168.4.0/24",
+                              'peer_subnets': "192.168.30.0/24,192.168.40.0/24"}
+                            ],
             'tenant_id': self._tenant_id}
 
         expected.update(extras)
@@ -222,4 +227,4 @@ class TestVPN(VPNPluginDbTestCase):
 
 
 class TestVPNXML(TestVPN):
-    fmt = 'xml'
+    fmt = 'json'

@@ -272,8 +272,8 @@ class Vpn(extensions.ExtensionDescriptor):
             params = RESOURCE_ATTRIBUTE_MAP[collection_name]
 
             member_actions = {}
-            #if resource_name == 'site':
-            #    member_actions = {'stats': 'GET'}
+            if resource_name == 'site':
+                member_actions = {'stats': 'GET'}
 
             controller = base.create_resource(
                 collection_name, resource_name, plugin, params,

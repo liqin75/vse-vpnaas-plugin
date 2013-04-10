@@ -127,7 +127,7 @@ class VPNTestCase(base.BaseTestCase):
     def _site_create(self, name="", description="",
                      local_endpoint="10.117.35.202", local_id="10.117.35.202",
                      peer_endpoint="10.117.35.203", peer_id="10.117.35.203",
-                     pri_networks="192.168.33.0/24-192.168.44.0/24",
+                     pri_networks="192.168.1.0/24-192.168.11.0/24",
                      psk="123",
                      mtu="1500",
                      location=None):
@@ -157,6 +157,11 @@ class VPNTestCase(base.BaseTestCase):
         res = self._do_request('DELETE', _get_path(path), None)
         return res
 
+    def _stats(self, id):
+        path = 'vpn/sites/{0}/stats'.format(id)
+        res = self._do_request('GET', _get_path(path), None)
+        return res
+
 
     def test_create_site(self, **extras):
         LOG.info("test to create site");
@@ -169,7 +174,11 @@ class VPNTestCase(base.BaseTestCase):
             'peer_id': "10.117.35.203",
             'psk': 'hello123',
             'mtu': 1500,
-            'pri_networks': "192.168.33.0/24-192.168.11.0/24",
+            'pri_networks': [
+               {
+                  'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                  'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
+               }]
             }
         expected.update(extras)
         site = self._site_create(name=expected['name'],
@@ -187,6 +196,7 @@ class VPNTestCase(base.BaseTestCase):
             dict((k, v) for k, v in site.items() if k in expected),
             expected
         )
+        res = self._get_resource('site', site['id'])
         return site
 
 
@@ -197,7 +207,11 @@ class VPNTestCase(base.BaseTestCase):
             'description': 'description for site1',
             'psk': '123',
             'mtu': 1800,
-            'pri_networks': "192.168.33.0/24-192.168.44.0/24",
+            'pri_networks': [
+               {
+                'local_subnets': "192.168.1.0/24",
+                'peer_subnets': "192.168.11.0/24"
+               }]
             }
         site = self._site_create(name=expected['name'],
                                  description=expected['description'],
@@ -215,9 +229,31 @@ class VPNTestCase(base.BaseTestCase):
 
     def test_list_sites(self):
         LOG.info("test to list sites");
-        response = self._do_request('GET', _get_path('vpn/sites'), None)
-        print(json.dumps(response, indent=4))
-        return response
+        expected = {
+            'name': 'site3',
+            'description': 'description for site3',
+            'psk': '123',
+            'mtu': 1800,
+            'pri_networks': [
+               {
+                'local_subnets': "192.168.1.0/24",
+                'peer_subnets': "192.168.11.0/24"
+               }]
+            }
+        site = self._site_create(name=expected['name'],
+                                 description=expected['description'],
+                                 pri_networks=expected['pri_networks'],
+                                 psk=expected['psk'],
+                                 mtu=expected['mtu'])
+        for k in ('id','local_endpoint','peer_endpoint','local_id','peer_id'):
+            self.assertTrue(site.get(k, None))
+        self.assertEqual(
+            dict((k, v) for k, v in site.items() if k in expected),
+            expected
+        )
+        res = self._get_resources('site')
+        print(json.dumps(res, indent=4))
+        return res
 
 
     def test_delete_site(self):
@@ -229,7 +265,11 @@ class VPNTestCase(base.BaseTestCase):
             'peer_endpoint': "10.117.35.203",
             'local_id': "10.117.35.202",
             'peer_id': "10.117.35.203",
-            'pri_networks': "192.168.33.0/24-192.168.44.0/24",
+            'pri_networks': [
+               {
+                  'local_subnets': "192.168.1.0/24",
+                  'peer_subnets': "192.168.11.0/24"
+               }]
             }
         site = self._site_create(name=expected['name'],
                                  description=expected['description'],
@@ -242,7 +282,7 @@ class VPNTestCase(base.BaseTestCase):
         site = self._site_delete(id=site['id'])
         return
 
-    '''
+
     def test_get_sites(self):
         LOG.info("test to get sites");
         site1 = self._site_create(name="site 1",
@@ -251,16 +291,22 @@ class VPNTestCase(base.BaseTestCase):
                                   local_id="10.117.35.202",
                                   peer_endpoint="10.117.35.203",
                                   peer_id="10.117.35.203",
-                                  pri_networks="192.168.33.0/24-192.168.44.0/24"
+                                  pri_networks=[{
+                                       'local_subnets': "192.168.1.0/24",
+                                       'peer_subnets': "192.168.11.0/24"
+                                    }]
                                   )
         site2 = self._site_create(name="site 2",
-                                  description="description 2",
-                                  local_endpoint="10.117.35.202",
-                                  local_id="10.117.35.202",
-                                  peer_endpoint="10.117.35.204",
-                                  peer_id="10.117.35.204",
-                                  pri_networks="192.168.33.0/24-192.168.22.0/24"
-                                  )
+                            description="description 2",
+                            local_endpoint="10.117.35.202",
+                            local_id="10.117.35.202",
+                            peer_endpoint="10.117.35.204",
+                            peer_id="10.117.35.204",
+                            pri_networks=[{
+                              'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                              'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
+                              }]
+                            )
         sites = self._get_resources('site')
         self.assertEqual(len(sites), 2)
         self.assertEqual(sites[0]['name'], site1['name'])
@@ -271,4 +317,30 @@ class VPNTestCase(base.BaseTestCase):
         r2 = self._get_resource('site', site2['id'])
         self.assertEqual(r1['id'], site1['id'])
         self.assertEqual(r2['id'], site2['id'])
-    '''
+
+
+    def test_stats(self):
+        LOG.info("test to get stats of site");
+        expected = {
+            'name': 'site1',
+            'description': 'description for site1',
+            'local_endpoint': "10.117.35.202",
+            'peer_endpoint': "10.117.35.203",
+            'local_id': "10.117.35.202",
+            'peer_id': "10.117.35.203",
+            'pri_networks': [
+               {
+                  'local_subnets': "192.168.1.0/24",
+                  'peer_subnets': "192.168.11.0/24"
+               }]
+            }
+        site = self._site_create(name=expected['name'],
+                                 description=expected['description'],
+                                 local_endpoint=expected['local_endpoint'],
+                                 local_id=expected['local_id'],
+                                 peer_endpoint=expected['peer_endpoint'],
+                                 peer_id=expected['peer_id'],
+                                 pri_networks=expected['pri_networks']
+                                 )
+        res = self._stats(id=site['id'])
+        return
