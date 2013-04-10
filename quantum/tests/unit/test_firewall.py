@@ -95,11 +95,7 @@ class FirewallTestCase(base.BaseTestCase):
         req = testlib_api.create_request(
             path, body, content_type,
             method, query_string=params)
-<<<<<<< HEAD
-        req.environ['quantum.context'] = q_context.Context('', self._tenant_id)
-=======
         req.environ['quantum.context'] = q_context.Context('', self._tenant_id, is_admin=True)
->>>>>>> fwaas
         res = req.get_response(self._api)
         if res.status_code >= 400:
             raise webexc.HTTPClientError(detail=res.body, code=res.status_code)
@@ -108,21 +104,12 @@ class FirewallTestCase(base.BaseTestCase):
 
     def _get_resources(self, resource):
         collection = resource + 's'
-<<<<<<< HEAD
-        res = self._do_request('GET', _get_path('firewall/') + collection)
-        return res[collection]
-
-    def _get_resource(self, resource, ipobj_id):
-        collection = resource + 's'
-        res = self._do_request('GET', _get_path('firewall/' + collection + '/' + ipobj_id))
-=======
         res = self._do_request('GET', _get_path('firewall/' + collection))
         return res[collection]
 
     def _get_resource(self, resource, id):
         collection = resource + 's'
         res = self._do_request('GET', _get_path('firewall/' + collection + '/' + id))
->>>>>>> fwaas
         return res[resource]
 
     def _rule_create(self, name="", description="", location=None):
@@ -199,26 +186,8 @@ class FirewallTestCase(base.BaseTestCase):
                 "tenant_id": self._tenant_id,
                 "name": "test serviceobj",
                 "description": "test serviceobj",
-<<<<<<< HEAD
-                "value": [
-                    {
-                        "protocol": "tcp",
-                        "ports": ["80", "443"]
-                    },
-                    {
-                        "protocol": "tcp",
-                        "sourcePorts": ["1-1024"],
-                        "ports": ["80", "443"]
-                    },
-                    {
-                        "protocol": "icmp",
-                        "types": ["echo", "reply"]
-                    }
-                ]
-=======
                 "protocol": "tcp",
                 "ports": ["80", "443"]
->>>>>>> fwaas
             }
         }
         res = self._do_request('POST', _get_path('firewall/serviceobjs'), data)
@@ -280,10 +249,7 @@ class FirewallTestCase(base.BaseTestCase):
 
     def test_ipobj_create(self):
         ipobj = self._ipobj_create()
-<<<<<<< HEAD
-=======
         ipobj1 = self._get_resource('ipobj', ipobj['id'])
->>>>>>> fwaas
         ipobjs = self._get_resources('ipobj')
         self.assertEqual(len(ipobjs), 1)
         self.assertEqual(ipobjs[0]['id'], ipobj['id'])
@@ -302,10 +268,7 @@ class FirewallTestCase(base.BaseTestCase):
 
     def test_zone_create(self):
         zone = self._zone_create()
-<<<<<<< HEAD
-=======
         zone1 = self._get_resource('zone', zone['id'])
->>>>>>> fwaas
         zones = self._get_resources('zone')
         self.assertEqual(len(zones), 1)
         self.assertEqual(zones[0]['id'], zone['id'])

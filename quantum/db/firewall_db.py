@@ -331,12 +331,9 @@ class FirewallPluginDb(FirewallPluginBase):
             if not svc:
                 svc = {}
 
-<<<<<<< HEAD
-=======
             print "src: {}".format(src)
             print "dst: {}".format(dst)
             print "svc: {}".format(svc)
->>>>>>> fwaas
             rule_id = uuidutils.generate_uuid()
             tenant_id = self._get_tenant_id_for_create(context, body)
             rule_db = Rule(
@@ -373,19 +370,11 @@ class FirewallPluginDb(FirewallPluginBase):
             if svc.get('services'):
                 rule_db.serviceConfig = []
                 for service in svc['services']:
-<<<<<<< HEAD
-                    svcdict = self._dict2serviceobj(service)
-                    svcCfg = RuleServiceConfig(
-                        protocol=svcdict['protocol'],
-                        values=svcdict['values'],
-                        sourcePorts=svcdict['sourcePorts']
-=======
                     svcobj = self._dict2serviceobj(service)
                     svcCfg = RuleServiceConfig(
                         protocol=svcobj['protocol'],
                         values=svcobj.get('values'),
                         sourcePorts=svcobj.get('sourcePorts')
->>>>>>> fwaas
                     )
                     rule_db.serviceConfig.append(svcCfg)
             if svc.get('serviceobjs'):
@@ -394,11 +383,8 @@ class FirewallPluginDb(FirewallPluginBase):
                     svcobj = self._get_by_id(context, ServiceObj, svcobj_id)
                     rule_db.serviceObj.append(svcobj)
 
-<<<<<<< HEAD
-=======
-            print rule_db
+           print rule_db
             print rule_db.sourceAddress
->>>>>>> fwaas
             context.session.add(rule_db)
 
             prev_id = None
@@ -584,16 +570,6 @@ class FirewallPluginDb(FirewallPluginBase):
 
     def _dict2serviceobj(self, svcdict):
         svcobj = {
-<<<<<<< HEAD
-            'name': svcdict['name'],
-            'description': svcdict.get('description'),
-            'protocol': svcdict['protocol']
-        }
-        if svcdict['protocol'].lower() == "icmp":
-            svcobj['values'] = json.dumps(svcdict['types'])
-        else:
-            svcobj['values'] = json.dumps(svcdict['ports'])
-=======
             'description': svcdict.get('description'),
             'protocol': svcdict['protocol']
         }
@@ -605,7 +581,6 @@ class FirewallPluginDb(FirewallPluginBase):
         else:
             if 'ports' in svcdict:
                 svcobj['values'] = json.dumps(svcdict['ports'])
->>>>>>> fwaas
         attrs = ['sourcePorts']
         for attr in attrs:
             if attr in svcdict:

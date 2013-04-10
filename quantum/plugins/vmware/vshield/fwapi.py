@@ -80,9 +80,6 @@ class FirewallAPI():
         self.ipseturi = '/api/2.0/services/ipset'
         self.appuri = '/api/2.0/services/application'
 
-<<<<<<< HEAD
-    def fwaas2vsmRule(self, rule):
-=======
     def fwaas2vsmSvc(self, svcs):
         if not svcs:
             return None
@@ -135,21 +132,13 @@ class FirewallAPI():
         return apps
 
     def fwaas2vsmRule(self, context, rule):
->>>>>>> fwaas
         if rule['action']:
             action = "accept"
         else:
             action = "drop"
         vsmRule = {
-<<<<<<< HEAD
-            "ruleType": "user",
-            "name": rule['name'],
-#            "description": rule.get('descrption'),
-            "description": rule['name'],
-=======
             "name": rule['name'],
             "description": rule.get('descrption'),
->>>>>>> fwaas
             "enabled": rule['enabled'],
             "action": action
         }
@@ -158,21 +147,6 @@ class FirewallAPI():
         svc = rule['service']
 
         srcGroupObjIds = []
-<<<<<<< HEAD
-        if src.get("ipobjs"):
-            # convert ipobj uuid to groupingObjectId
-            pass
-
-        dstGroupObjIds = []
-        if dst.get("ipobjs"):
-            # convert ipobj uuid to groupingObjectId
-            pass
-
-        appIds = []
-        if svc.get("serviceobjs"):
-            # convert serviceobj uuid to applicationId
-            pass
-=======
         if 'ipobjs' in src:
             srcGroupObjIds = self.fwaas2vsmIPObjs(context, src['ipobjs'])
 
@@ -183,7 +157,6 @@ class FirewallAPI():
         appIds = []
         if 'serviceobjs' in svc:
             appIds = self.fwaas2vsmServiceObjs(context, svc['serviceobjs'])
->>>>>>> fwaas
 
         vsmSrc = {
             "ipAddress": src.get("addresses"),
@@ -197,34 +170,12 @@ class FirewallAPI():
         }
         vsmApp = {
             "applicationId": appIds,
-<<<<<<< HEAD
-#            "service": svc.get('services')
-            "service": None
-=======
             "service": self.fwaas2vsmSvc(svc.get('services'))
->>>>>>> fwaas
         }
         vsmRule['source'] = vsmSrc
         vsmRule['destination'] = vsmDst
         vsmRule['application'] = vsmApp
 
-<<<<<<< HEAD
-        return vsmRule
-
-    def create_rule(self, context, rule, location=None):
-        request = self.fwaas2vsmRule(rule)
-        uri = self.uriprefix + '/config/rules'
-        header, response = self.vse.vsmconfig('POST', uri, request)
-        objuri = header['location']
-        ruleId = objuri[objuri.rfind("/")+1:]
-        """
-        uuid2vseid = PoolUuid2Vseid(uuid=pool['id'], vseid=poolId)
-        context.session.add(uuid2vseid)
-        print "create_pool: response '{0}'".format(response)
-        """
-        return response
-
-=======
         return {
             "firewallRules": [vsmRule]
         }
@@ -244,7 +195,6 @@ class FirewallAPI():
         uri = self.uriprefix + "/config/rules/{0}".format(ruleId)
         header, response = self.vse.vsmconfig('DELETE', uri)
 
->>>>>>> fwaas
     def fwaas2vsmIpset(self, ipset):
         ipset = {
             "name": ipset['name'],
