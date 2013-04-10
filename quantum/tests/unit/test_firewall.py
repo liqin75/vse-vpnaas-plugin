@@ -45,50 +45,11 @@ class FirewallTestPlugin(
 
     supported_extension_aliases = ["fwaas"]
 
-    """
-    def create_rule(self, context, rule, **kwargs):
-        r = super(FirewallTestPlugin, self).create_rule(
-            context, rule)
-        return r
+    def get_plugin_type(self):
+        return constants.FIREWALL
 
-    def get_rules(self, context, filters=None, fields=None):
-        r = super(FirewallTestPlugin, self).get_rules(
-            context, filters, fields)
-        return r
-
-    def get_rule(self, context, id, fields=None):
-        r = super(FirewallTestPlugin, self).get_rule(
-            context, id, fields)
-        return r
-
-    def create_ipobj(self, context, ipobj):
-        with context.session.begin(subtransactions=True):
-            r = super(FirewallTestPlugin, self).create_ipobj(
-                context, ipobj) 
-        return r
-
-    def get_ipobjs(self, context, filters=None, fields=None):
-        r = super(FirewallTestPlugin, self).get_ipobjs(
-            context, filters, fields)
-        return r
-
-    def get_ipobj(self, context, id, fields=None):
-        r = super(FirewallTestPlugin, self).get_ipobj(
-            context, id, fields)
-        return r
-
-    def create_serviceobj(self, context, serviceobj):
-        with context.session.begin(subtransactions=True):
-            r = super(FirewallTestPlugin, self).create_serviceobj(
-                context, serviceobj) 
-        return r
-
-    def create_zone(self, context, zone):
-        with context.session.begin(subtransactions=True):
-            r = super(FirewallTestPlugin, self).create_zone(
-                context, zone) 
-        return r
-    """
+    def get_plugin_description(self):
+        return "Quantum Firewall Service Plugin"
 
 
 class FirewallTestCase(base.BaseTestCase):
@@ -134,7 +95,11 @@ class FirewallTestCase(base.BaseTestCase):
         req = testlib_api.create_request(
             path, body, content_type,
             method, query_string=params)
+<<<<<<< HEAD
         req.environ['quantum.context'] = q_context.Context('', self._tenant_id)
+=======
+        req.environ['quantum.context'] = q_context.Context('', self._tenant_id, is_admin=True)
+>>>>>>> fwaas
         res = req.get_response(self._api)
         if res.status_code >= 400:
             raise webexc.HTTPClientError(detail=res.body, code=res.status_code)
@@ -143,12 +108,21 @@ class FirewallTestCase(base.BaseTestCase):
 
     def _get_resources(self, resource):
         collection = resource + 's'
+<<<<<<< HEAD
         res = self._do_request('GET', _get_path('firewall/') + collection)
         return res[collection]
 
     def _get_resource(self, resource, ipobj_id):
         collection = resource + 's'
         res = self._do_request('GET', _get_path('firewall/' + collection + '/' + ipobj_id))
+=======
+        res = self._do_request('GET', _get_path('firewall/' + collection))
+        return res[collection]
+
+    def _get_resource(self, resource, id):
+        collection = resource + 's'
+        res = self._do_request('GET', _get_path('firewall/' + collection + '/' + id))
+>>>>>>> fwaas
         return res[resource]
 
     def _rule_create(self, name="", description="", location=None):
@@ -225,6 +199,7 @@ class FirewallTestCase(base.BaseTestCase):
                 "tenant_id": self._tenant_id,
                 "name": "test serviceobj",
                 "description": "test serviceobj",
+<<<<<<< HEAD
                 "value": [
                     {
                         "protocol": "tcp",
@@ -240,6 +215,10 @@ class FirewallTestCase(base.BaseTestCase):
                         "types": ["echo", "reply"]
                     }
                 ]
+=======
+                "protocol": "tcp",
+                "ports": ["80", "443"]
+>>>>>>> fwaas
             }
         }
         res = self._do_request('POST', _get_path('firewall/serviceobjs'), data)
@@ -301,6 +280,10 @@ class FirewallTestCase(base.BaseTestCase):
 
     def test_ipobj_create(self):
         ipobj = self._ipobj_create()
+<<<<<<< HEAD
+=======
+        ipobj1 = self._get_resource('ipobj', ipobj['id'])
+>>>>>>> fwaas
         ipobjs = self._get_resources('ipobj')
         self.assertEqual(len(ipobjs), 1)
         self.assertEqual(ipobjs[0]['id'], ipobj['id'])
@@ -319,6 +302,10 @@ class FirewallTestCase(base.BaseTestCase):
 
     def test_zone_create(self):
         zone = self._zone_create()
+<<<<<<< HEAD
+=======
+        zone1 = self._get_resource('zone', zone['id'])
+>>>>>>> fwaas
         zones = self._get_resources('zone')
         self.assertEqual(len(zones), 1)
         self.assertEqual(zones[0]['id'], zone['id'])

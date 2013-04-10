@@ -27,6 +27,14 @@ class ServiceObjUuid2Vseid(model_base.BASEV2):
     vseid = sa.Column(sa.String(36), nullable=False)
 
 
+class RuleUuid2Vseid(model_base.BASEV2):
+    __tablename__ = 'ruleuuid2vseid'
+    uuid = sa.Column(sa.String(36),
+                     sa.ForeignKey("rules.id", ondelete='CASCADE'),
+                     primary_key=True)
+    vseid = sa.Column(sa.String(36), nullable=False)
+
+
 def getuuid2vseid(context, uuid, model):
     query = context.session.query(model)
     query = query.filter(model.uuid == uuid)
@@ -72,16 +80,76 @@ class FirewallAPI():
         self.ipseturi = '/api/2.0/services/ipset'
         self.appuri = '/api/2.0/services/application'
 
+<<<<<<< HEAD
     def fwaas2vsmRule(self, rule):
+=======
+    def fwaas2vsmSvc(self, svcs):
+        if not svcs:
+            return None
+        services = []
+        for svc in svcs:
+            protocol = svc['protocol']
+            if protocol.lower() == "icmp":
+                if 'types' in svc:
+                    for type in svc['types']:
+                        service = {
+                            "protocol": protocol,
+                            "icmpType": type
+                        }
+                        services.append(service)
+                else:
+                    service = {
+                        "protocol": svc['protocol']
+                    }
+                    services.append(service)
+            else:
+                service = {
+                    "protocol": protocol
+                }
+                if 'ports' in svc:
+                    service['port'] = svc['ports']
+                if 'sourcePorts' in svc:
+                    service['sourcePort'] = svc['sourcePorts']
+                services.append(service)
+
+        return services
+
+    def fwaas2vsmIPObjs(self, context, ipobjs):
+        rst = context.session.query(IPObjUuid2Vseid.vseid).filter(
+            IPObjUuid2Vseid.uuid.in_(ipobjs)).all()
+        print rst
+        ipsets = []
+        for ipset in rst:
+            ipsets.append(ipset.vseid)
+        print ipsets
+        return ipsets
+
+    def fwaas2vsmServiceObjs(self, context, svcobjs):
+        rst = context.session.query(ServiceObjUuid2Vseid.vseid).filter(
+            ServiceObjUuid2Vseid.uuid.in_(svcobjs)).all()
+        print rst
+        apps = []
+        for app in rst:
+            apps.append(app.vseid)
+        print apps
+        return apps
+
+    def fwaas2vsmRule(self, context, rule):
+>>>>>>> fwaas
         if rule['action']:
             action = "accept"
         else:
             action = "drop"
         vsmRule = {
+<<<<<<< HEAD
             "ruleType": "user",
             "name": rule['name'],
 #            "description": rule.get('descrption'),
             "description": rule['name'],
+=======
+            "name": rule['name'],
+            "description": rule.get('descrption'),
+>>>>>>> fwaas
             "enabled": rule['enabled'],
             "action": action
         }
@@ -90,6 +158,7 @@ class FirewallAPI():
         svc = rule['service']
 
         srcGroupObjIds = []
+<<<<<<< HEAD
         if src.get("ipobjs"):
             # convert ipobj uuid to groupingObjectId
             pass
@@ -103,6 +172,18 @@ class FirewallAPI():
         if svc.get("serviceobjs"):
             # convert serviceobj uuid to applicationId
             pass
+=======
+        if 'ipobjs' in src:
+            srcGroupObjIds = self.fwaas2vsmIPObjs(context, src['ipobjs'])
+
+        dstGroupObjIds = []
+        if 'ipobjs' in dst:
+            dstGroupObjIds = self.fwaas2vsmIPObjs(context, dst['ipobjs'])
+
+        appIds = []
+        if 'serviceobjs' in svc:
+            appIds = self.fwaas2vsmServiceObjs(context, svc['serviceobjs'])
+>>>>>>> fwaas
 
         vsmSrc = {
             "ipAddress": src.get("addresses"),
@@ -116,13 +197,18 @@ class FirewallAPI():
         }
         vsmApp = {
             "applicationId": appIds,
+<<<<<<< HEAD
 #            "service": svc.get('services')
             "service": None
+=======
+            "service": self.fwaas2vsmSvc(svc.get('services'))
+>>>>>>> fwaas
         }
         vsmRule['source'] = vsmSrc
         vsmRule['destination'] = vsmDst
         vsmRule['application'] = vsmApp
 
+<<<<<<< HEAD
         return vsmRule
 
     def create_rule(self, context, rule, location=None):
@@ -138,6 +224,27 @@ class FirewallAPI():
         """
         return response
 
+=======
+        return {
+            "firewallRules": [vsmRule]
+        }
+
+    def create_rule(self, context, rule, location=None):
+        request = self.fwaas2vsmRule(context, rule)
+        uri = self.uriprefix + '/config/rules'
+        header, response = self.vse.vsmconfig('POST', uri, request, decode=False)
+        objuri = header['location']
+        ruleId = objuri[objuri.rfind("/")+1:]
+        uuid2vseid = RuleUuid2Vseid(uuid=rule['id'], vseid=ruleId)
+        context.session.add(uuid2vseid)
+        return response
+
+    def delete_rule(self, context, rule):
+        ruleId = uuid2vseid(context, rule['id'], RuleUuid2Vseid)
+        uri = self.uriprefix + "/config/rules/{0}".format(ruleId)
+        header, response = self.vse.vsmconfig('DELETE', uri)
+
+>>>>>>> fwaas
     def fwaas2vsmIpset(self, ipset):
         ipset = {
             "name": ipset['name'],

@@ -261,7 +261,7 @@ class FirewallPluginDb(FirewallPluginBase):
             'description': rule.get('description'),
             'enabled': rule['enabled']
         }
-        if res['log']:
+        if rule.get('log', False):
             res['log'] = 'enabled'
         else:
             res['log'] = 'disabled'
@@ -271,51 +271,42 @@ class FirewallPluginDb(FirewallPluginBase):
             res['action'] = 'drop'
 
         src = {}
-        if res.get('sourceAddress'):
+       if rule.get('sourceAddress'):
             src['addresses'] = []
-            for address in res['sourceAddress']:
+            for address in rule['sourceAddress']:
                 src['addresses'].append(address['address'])
-            del res['sourceAddress']
-        if res.get('sourceIPObj'):
+        if rule.get('sourceIPObj'):
             src['ipobjs'] = []
-            for ipobj in res['sourceIPObj']:
+            for ipobj in rule['sourceIPObj']:
                 src['ipobjs'].append(ipobj['id'])
-            del res['sourceIPObj']
-        if res.get('sourceZone'):
-            src['zone'] = res['sourceZone']
-            del res['sourceZone']
+        if rule.get('sourceZone'):
+            src['zone'] = rule['sourceZone']
         res['source'] = src
 
         dst = {}
-        if res.get('destinationAddress'):
+        if rule.get('destinationAddress'):
             dst['addresses'] = []
-            for address in res['destinationAddress']:
+            for address in rule['destinationAddress']:
                 dst['addresses'].append(address['address'])
-            del res['destinationAddress']
-        if res.get('destinationIPObj'):
+        if rule.get('destinationIPObj'):
             dst['ipobjs'] = []
-            for ipobj in res['destinationIPObj']:
+            for ipobj in rule['destinationIPObj']:
                 dst['ipobjs'].append(ipobj['id'])
-            del res['destinationIPObj']
-        if res.get('destinationZone'):
-            dst['zone'] = res['destinationZone']
-            del res['destinationZone']
+        if rule.get('destinationZone'):
+            dst['zone'] = rule['destinationZone']
         res['destination'] = dst
 
         svc = {}
-        if res.get('serviceConfig'):
+        if rule.get('serviceConfig'):
             svc['services'] = []
-            for svcCfg in res['serviceConfig']:
+            for svcCfg in rule['serviceConfig']:
                 svc['services'].append(self._serviceobj2dict(svcCfg))
-            del res['serviceConfig']
-        if res.get('serviceObj'):
+        if rule.get('serviceObj'):
             svc['serviceobjs'] = []
-            for svcCfg in res['serviceObj']:
+            for svcCfg in rule['serviceObj']:
                 svc['serviceobjs'].append(svcCfg['id'])
-            del res['serviceObj']
         res['service'] = svc
 
-        del res['_sa_instance_state']
         return self._fields(res, fields)
 
     def _get_last_rule(self, context, tenant_id):
@@ -340,6 +331,12 @@ class FirewallPluginDb(FirewallPluginBase):
             if not svc:
                 svc = {}
 
+<<<<<<< HEAD
+=======
+            print "src: {}".format(src)
+            print "dst: {}".format(dst)
+            print "svc: {}".format(svc)
+>>>>>>> fwaas
             rule_id = uuidutils.generate_uuid()
             tenant_id = self._get_tenant_id_for_create(context, body)
             rule_db = Rule(
@@ -376,11 +373,19 @@ class FirewallPluginDb(FirewallPluginBase):
             if svc.get('services'):
                 rule_db.serviceConfig = []
                 for service in svc['services']:
+<<<<<<< HEAD
                     svcdict = self._dict2serviceobj(service)
                     svcCfg = RuleServiceConfig(
                         protocol=svcdict['protocol'],
                         values=svcdict['values'],
                         sourcePorts=svcdict['sourcePorts']
+=======
+                    svcobj = self._dict2serviceobj(service)
+                    svcCfg = RuleServiceConfig(
+                        protocol=svcobj['protocol'],
+                        values=svcobj.get('values'),
+                        sourcePorts=svcobj.get('sourcePorts')
+>>>>>>> fwaas
                     )
                     rule_db.serviceConfig.append(svcCfg)
             if svc.get('serviceobjs'):
@@ -389,6 +394,11 @@ class FirewallPluginDb(FirewallPluginBase):
                     svcobj = self._get_by_id(context, ServiceObj, svcobj_id)
                     rule_db.serviceObj.append(svcobj)
 
+<<<<<<< HEAD
+=======
+            print rule_db
+            print rule_db.sourceAddress
+>>>>>>> fwaas
             context.session.add(rule_db)
 
             prev_id = None
@@ -574,6 +584,7 @@ class FirewallPluginDb(FirewallPluginBase):
 
     def _dict2serviceobj(self, svcdict):
         svcobj = {
+<<<<<<< HEAD
             'name': svcdict['name'],
             'description': svcdict.get('description'),
             'protocol': svcdict['protocol']
@@ -582,6 +593,19 @@ class FirewallPluginDb(FirewallPluginBase):
             svcobj['values'] = json.dumps(svcdict['types'])
         else:
             svcobj['values'] = json.dumps(svcdict['ports'])
+=======
+            'description': svcdict.get('description'),
+            'protocol': svcdict['protocol']
+        }
+        if 'name' in svcdict:
+            svcobj['name'] = svcdict['name']
+        if svcdict['protocol'].lower() == "icmp":
+            if 'types' in svcdict:
+                svcobj['values'] = json.dumps(svcdict['types'])
+        else:
+            if 'ports' in svcdict:
+                svcobj['values'] = json.dumps(svcdict['ports'])
+>>>>>>> fwaas
         attrs = ['sourcePorts']
         for attr in attrs:
             if attr in svcdict:
