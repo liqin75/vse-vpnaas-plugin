@@ -226,6 +226,9 @@ class VPNPluginDb(VPNPluginBase):
 
     def update_site(self, context, id, site):
         s = site['site']
+        if s.has_key('pri_networks'):
+            pri_networks = self._subnets_to_str(s['pri_networks'])
+            s['pri_networks'] = pri_networks
 
         with context.session.begin(subtransactions=True):
             site_db = self._get_resource(context, Site, id)

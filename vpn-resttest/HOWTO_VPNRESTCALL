@@ -1,0 +1,47 @@
+The Methods to call VPNaas RESTful API is as follow:
+
+    1. switch the username to stack, and then setup the OpenStack environment with Devstack
+        stack$: git clone https://github.com/openstack-dev/devstack.git
+        stack$: cd devstack
+        stack$: ./stack.sh
+
+    2. stop the Quantum Server named 'q-svc*' in the OpenStack screen.
+        stack$: script /dev/null
+        stack$: screen -x stack
+        'Ctrl-a $num' switch to the 'q-svc*' screen, and Ctrl-c it.
+
+    3. download the VPNaas codes
+        stack$: git clone https://github.com/liqin75/vse-vpnaas-plugin.git
+
+    4. copy the VPNaas codes into Quantum
+        stack$:  cp -R vse-vpnaas-plugin/* /opt/stack/quantum
+
+    5. add the following line into /etc/quantum/quantum.conf
+        stack$: echo "service_plugins  = quantum.plugins.vmware.vshield.vpnplugin.VShieldEdgeVPNPlugin" >> /etc/quantum/quantum.conf
+
+    6. restart the Quantum Server
+        stack$: cd /opt/stack/quantum && python /opt/stack/quantum/bin/quantum-server --config-file /etc/quantum/quantum.conf --config-file /etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini || touch "/opt/stack/status/stack/q-svc.failure"
+
+    7. copy all these three scripts into devstack, and enter the devstack Dir
+        stack$: cp lib.py get.token.sh vpn.py devstack/
+        stack$: cd devstack/
+    
+    8. edit the OS_AUTH_URL Var in the 'get.token', and then run the script to get the 'token' and 'tenant_id'
+        stack$: ./get.token.sh
+        you will get these following similar information
+            "token": {
+            "expires": "2013-04-11T06:31:25Z",
+            "id": "MIILogYJKoZIhvcNAQcCoIILkzCCC48CAQExCTAHBgUrDgMCGjCCCnsGCSqGSIb3DQEHAaCCCmwEggpoeyJhY2Nlc3MiOiB7InRva2VuIjogeyJpc3N1ZWRfYXQiOiAiMjAxMy0wNC0xMFQwNjozMToyNS43NzY4NTgiLCAiZXhwaXJlcyI6ICIyMDEzLTA0LTExVDA2OjMxOjI1WiIsICJpZCI6ICJwbGFjZWhvbGRlciIsICJ0ZW5hbnQiOiB7ImRlc2NyaXB0aW9uIjogbnVsbCwgImVuYWJsZWQiOiB0cnVlLCAiaWQiOiAiYTVjNTdiY2EwMjBmNGJhZDk3ZmM1N2Q4ZDVlMjY0MTMiLCAibmFtZSI6ICJkZW1vIn19LCAic2VydmljZUNhdGFsb2ciOiBbeyJlbmRwb2ludHMiOiBbeyJhZG1pblVSTCI6ICJodHRwOi8vMTAuMTE3LjUuMTYwOjg3NzQvdjIvYTVjNTdiY2EwMjBmNGJhZDk3ZmM1N2Q4ZDVlMjY0MTMiLCAicmVnaW9uIjogIlJlZ2lvbk9uZSIsICJpbnRlcm5hbFVSTCI6ICJodHRwOi8vMTAuMTE3LjUuMTYwOjg3NzQvdjIvYTVjNTdiY2EwMjBmNGJhZDk3ZmM1N2Q4ZDVlMjY0MTMiLCAiaWQiOiAiM2UxMzdlZjMzMTMzNGFkNmIyYjRhMTBlZjA5ZjJlMTIiLCAicHVibGljVVJMIjogImh0dHA6Ly8xMC4xMTcuNS4xNjA6ODc3NC92Mi9hNWM1N2JjYTAyMGY0YmFkOTdmYzU3ZDhkNWUyNjQxMyJ9XSwgImVuZHBvaW50c19saW5rcyI6IFtdLCAidHlwZSI6ICJjb21wdXRlIiwgIm5hbWUiOiAibm92YSJ9LCB7ImVuZHBvaW50cyI6IFt7ImFkbWluVVJMIjogImh0dHA6Ly8xMC4xMTcuNS4xNjA6OTY5Ni8iLCAicmVnaW9uIjogIlJlZ2lvbk9uZSIsICJpbnRlcm5hbFVSTCI6ICJodHRwOi8vMTAuMTE3LjUuMTYwOjk2OTYvIiwgImlkIjogIjBkNWIzY2IwN2ExYzQwMzNiMWYwOTkxN2Q5MjUxZTU1IiwgInB1YmxpY1VSTCI6ICJodHRwOi8vMTAuMTE3LjUuMTYwOjk2OTYvIn1dLCAiZW5kcG9pbnRzX2xpbmtzIjogW10sICJ0eXBlIjogIm5ldHdvcmsiLCAibmFtZSI6ICJxdWFudHVtIn0sIHsiZW5kcG9pbnRzIjogW3siYWRtaW5VUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDozMzMzIiwgInJlZ2lvbiI6ICJSZWdpb25PbmUiLCAiaW50ZXJuYWxVUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDozMzMzIiwgImlkIjogIjI0NTBkYTk1NWYzMzQxM2JiZDY5MzMxN2M0ZmU4NDcyIiwgInB1YmxpY1VSTCI6ICJodHRwOi8vMTAuMTE3LjUuMTYwOjMzMzMifV0sICJlbmRwb2ludHNfbGlua3MiOiBbXSwgInR5cGUiOiAiczMiLCAibmFtZSI6ICJzMyJ9LCB7ImVuZHBvaW50cyI6IFt7ImFkbWluVVJMIjogImh0dHA6Ly8xMC4xMTcuNS4xNjA6OTI5MiIsICJyZWdpb24iOiAiUmVnaW9uT25lIiwgImludGVybmFsVVJMIjogImh0dHA6Ly8xMC4xMTcuNS4xNjA6OTI5MiIsICJpZCI6ICIyMjhjOTM2ODEwMzE0NzM2YjBlYjRkNWM5NjUyNTcyYSIsICJwdWJsaWNVUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDo5MjkyIn1dLCAiZW5kcG9pbnRzX2xpbmtzIjogW10sICJ0eXBlIjogImltYWdlIiwgIm5hbWUiOiAiZ2xhbmNlIn0sIHsiZW5kcG9pbnRzIjogW3siYWRtaW5VUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDo4Nzc2L3YxL2E1YzU3YmNhMDIwZjRiYWQ5N2ZjNTdkOGQ1ZTI2NDEzIiwgInJlZ2lvbiI6ICJSZWdpb25PbmUiLCAiaW50ZXJuYWxVUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDo4Nzc2L3YxL2E1YzU3YmNhMDIwZjRiYWQ5N2ZjNTdkOGQ1ZTI2NDEzIiwgImlkIjogIjM4NTVkNDFmZmYyZjRjNzBiMTY3MGM4MjFiZTg0NzRjIiwgInB1YmxpY1VSTCI6ICJodHRwOi8vMTAuMTE3LjUuMTYwOjg3NzYvdjEvYTVjNTdiY2EwMjBmNGJhZDk3ZmM1N2Q4ZDVlMjY0MTMifV0sICJlbmRwb2ludHNfbGlua3MiOiBbXSwgInR5cGUiOiAidm9sdW1lIiwgIm5hbWUiOiAiY2luZGVyIn0sIHsiZW5kcG9pbnRzIjogW3siYWRtaW5VUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDo4NzczL3NlcnZpY2VzL0FkbWluIiwgInJlZ2lvbiI6ICJSZWdpb25PbmUiLCAiaW50ZXJuYWxVUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDo4NzczL3NlcnZpY2VzL0Nsb3VkIiwgImlkIjogIjAwZmJkZmY1NmQzZjRkZmU4YmU1ZjkyMTIwODM5MjAzIiwgInB1YmxpY1VSTCI6ICJodHRwOi8vMTAuMTE3LjUuMTYwOjg3NzMvc2VydmljZXMvQ2xvdWQifV0sICJlbmRwb2ludHNfbGlua3MiOiBbXSwgInR5cGUiOiAiZWMyIiwgIm5hbWUiOiAiZWMyIn0sIHsiZW5kcG9pbnRzIjogW3siYWRtaW5VUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDozNTM1Ny92Mi4wIiwgInJlZ2lvbiI6ICJSZWdpb25PbmUiLCAiaW50ZXJuYWxVUkwiOiAiaHR0cDovLzEwLjExNy41LjE2MDo1MDAwL3YyLjAiLCAiaWQiOiAiMjUzMWMwNTdiNWJmNDQ1M2FiNTVlYzBiYjQ2ZWU2NmMiLCAicHVibGljVVJMIjogImh0dHA6Ly8xMC4xMTcuNS4xNjA6NTAwMC92Mi4wIn1dLCAiZW5kcG9pbnRzX2xpbmtzIjogW10sICJ0eXBlIjogImlkZW50aXR5IiwgIm5hbWUiOiAia2V5c3RvbmUifV0sICJ1c2VyIjogeyJ1c2VybmFtZSI6ICJkZW1vIiwgInJvbGVzX2xpbmtzIjogW10sICJpZCI6ICI1OTkxMjU2MTJhMzg0MWY1ODRkMTY1NTBjZTNkYmRiYiIsICJyb2xlcyI6IFt7Im5hbWUiOiAiYW5vdGhlcnJvbGUifSwgeyJuYW1lIjogIk1lbWJlciJ9XSwgIm5hbWUiOiAiZGVtbyJ9LCAibWV0YWRhdGEiOiB7ImlzX2FkbWluIjogMCwgInJvbGVzIjogWyJmMWNiY2Y3MGVmNjk0MGZmYmNkZmRjZTlkZDY0NzA0ZSIsICI2MDY5NGI5NjQwMzA0MzFkYjkxMzIwNDA4Nzc5NzdhZCJdfX19MYH-MIH8AgEBMFwwVzELMAkGA1UEBhMCVVMxDjAMBgNVBAgTBVVuc2V0MQ4wDAYDVQQHEwVVbnNldDEOMAwGA1UEChMFVW5zZXQxGDAWBgNVBAMTD3d3dy5leGFtcGxlLmNvbQIBATAHBgUrDgMCGjANBgkqhkiG9w0BAQEFAASBgK8nSSqe5T6nNscOwC6ABdUqB29llMZvb7NAQlDzkuCcCOVdes-lbw+I98hYQf5KKtSOZIBmpFq-jBEP-89XNrOAoxcwVeFOY-H53ljUe0ZFWQOw4cl9YMKXR1oQTrukrA9wK3iWyv7tDK--DMD5f1wJnAgUSJnBSAFwOwEQmQjr",
+            "issued_at": "2013-04-10T06:31:25.776858",
+            "tenant": {
+                "description": null,
+                "enabled": true,
+                "id": "a5c57bca020f4bad97fc57d8d5e26413",
+                "name": "demo"
+            }
+        }
+    
+    9. replace the token Var in lib.py with the gotten token, and edit the qService Var in lib.py
+
+   10. replace the tenantId in vpn.py with the gotten tenant.id, and then run the vpn.py to see the test results
+        stack$: python ./vpn.py

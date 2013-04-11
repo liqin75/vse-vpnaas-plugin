@@ -82,9 +82,9 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
 
     def update_site(self, context, id, site):
         with context.session.begin(subtransactions=True):
-            s_query = self.get_site(context, id, fields=["status"])
-            if s_query['status'] in [constants.PENDING_DELETE, constants.ERROR]:
-                raise vpn.StateInvalid(id=id, state=s_query['status'])
+#            s_query = self.get_site(context, id, fields=["status"])
+#            if s_query['status'] in [constants.PENDING_DELETE, constants.ERROR]:
+#                raise vpn.StateInvalid(id=id, state=s_query['status'])
 
             s = super(VShieldEdgeVPNPlugin, self).update_site(context, id, site)
             self.update_status(context, vpn_db.Site, id,

@@ -127,10 +127,14 @@ class VPNTestCase(base.BaseTestCase):
     def _site_create(self, name="", description="",
                      local_endpoint="10.117.35.202", local_id="10.117.35.202",
                      peer_endpoint="10.117.35.203", peer_id="10.117.35.203",
-                     pri_networks="192.168.1.0/24-192.168.11.0/24",
-                     psk="123",
-                     mtu="1500",
-                     location=None):
+                     pri_networks = [
+                        {
+                           'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                           'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
+                        }],
+                      psk="123",
+                      mtu="1500",
+                      location=None):
         data = {
             "site": {
                 "tenant_id": self._tenant_id,
@@ -151,6 +155,18 @@ class VPNTestCase(base.BaseTestCase):
             data['site']['location'] = location
         res = self._do_request('POST', _get_path('vpn/sites'), data)
         return res['site']
+
+    def _site_update(self, id, site=None):
+        path = 'vpn/sites/{0}'.format(id)
+        old_site = self._do_request('GET', _get_path(path), None)
+        if site is None:
+            return old_site['site']
+        data = {
+            "site": site
+            }
+        new_site = self._do_request('PUT', _get_path(path), data)
+        return new_site['site']
+
 
     def _site_delete(self, id):
         path = 'vpn/sites/{0}'.format(id)
@@ -199,7 +215,6 @@ class VPNTestCase(base.BaseTestCase):
         res = self._get_resource('site', site['id'])
         return site
 
-
     def test_update_site(self):
         LOG.info("test to update site");
         expected = {
@@ -209,8 +224,8 @@ class VPNTestCase(base.BaseTestCase):
             'mtu': 1800,
             'pri_networks': [
                {
-                'local_subnets': "192.168.1.0/24",
-                'peer_subnets': "192.168.11.0/24"
+                  'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                  'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
                }]
             }
         site = self._site_create(name=expected['name'],
@@ -218,14 +233,24 @@ class VPNTestCase(base.BaseTestCase):
                                  pri_networks=expected['pri_networks'],
                                  psk=expected['psk'],
                                  mtu=expected['mtu'])
-        for k in ('id','local_endpoint','peer_endpoint','local_id','peer_id'):
-            self.assertTrue(site.get(k, None))
+        new_expected = {
+            'name': 'site2',
+            'description': 'new description for site1',
+            'psk': '234',
+            'mtu': 1800,
+            'pri_networks': [
+               {
+                  'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                  'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
+               }]
+            }
+        new_site = self._site_update(site['id'], new_expected)
+        self.assertEqual(site['id'], new_site['id'])
         self.assertEqual(
-            dict((k, v) for k, v in site.items() if k in expected),
-            expected
+            dict((k, v) for k, v in new_site.items() if k in new_expected),
+            new_expected
         )
-        return site
-
+        return new_site
 
     def test_list_sites(self):
         LOG.info("test to list sites");
