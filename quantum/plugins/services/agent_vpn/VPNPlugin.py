@@ -150,19 +150,38 @@ class VPNPlugin(vpn_db.VPNPluginDb):
         return res
 
     def get_isakmp_policys(self, context, filters=None, fields=None):
-        LOG.debug(_("To be implemented"))
+        res = super(VPNPlugin, self).get_isakmp_policys(context, filters, fields)
+        LOG.debug(_("Get isakmp policys"))
+        return res
 
     def get_isakmp_policy(self, context, id, fields=None):
-        LOG.debug(_("To be implemented"))
+        res = super(VPNPlugin, self).get_isakmp_policy(context, id, fields)
+        LOG.debug(_("Get isakmp policy: %s"), id)
+        return res
 
     def create_isakmp_policy(self, context, isakmp_policy):
-        LOG.debug(_("To be implemented"))
+        s = super(VPNPlugin, self).create_isakmp_policy(context, isakmp_policy)
+        self.update_status(context, vpn_db.IsakmpPolicy, s['id'],
+                           constants.PENDING_CREATE)
+        LOG.debug(_("Create isakmp policy: %s") % s['id'])
+
+        s_query = self.get_isakmp_policy(context, s['id'])
+        return s_query
 
     def update_isakmp_policy(self, context, id, isakmp_policy):
-        LOG.debug(_("To be implemented"))
+        if 'status' not in isakmp_policy['isakmp_policy']:
+            isakmp_policy['isakmp_policy']['status'] = constants.PENDING_UPDATE            
+        s = super(VPNPlugin, self).update_isakmp_policy(context, id, isakmp_policy)
+        LOG.debug(_("Update isakmp policy: %s"), id)
+        # TODO notify vpnagent
+        s_rt = self.get_isakmp_policy(context, id)
+        return s_rt
 
     def delete_isakmp_policy(self, context, id):
-        LOG.debug(_("To be implemented"))
+        self.update_status(context, vpn_db.IsakmpPolicy, id, constants.PENDING_DELETE)
+        LOG.debug(_("Delete isakmp policy: %s"), id)
+        # TODO notify vpnagent
+        super(VPNPlugin, self).delete_isakmp_policy(context, id)
 
     def get_ipsec_policys(self, context, filters=None, fields=None):
         res = super(VPNPlugin, self).get_ipsec_policys(context, filters, fields)

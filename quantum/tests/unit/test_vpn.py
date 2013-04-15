@@ -535,3 +535,177 @@ class VPNTestCase(base.BaseTestCase):
         r2 = self._get_resource('ipsec_policy', ipsec_policy2_get['id'])
         self.assertEqual(r1['id'], ipsec_policy1_get['id'])
         self.assertEqual(r2['id'], ipsec_policy2_get['id'])
+
+
+############################################################################################
+## Isakmp Policy test
+    def _isakmp_policy_create(self, name='isakmp_policy1',
+                            authentication_mode='psk',
+                            enable_pfs=True,
+                            encryption_algorithm='aes256', authentication_algorithm='sha1',
+                            dh_group='2', life_time=28000,description=None):
+        data = {'isakmp_policy': {'name': name,
+                                  'tenant_id': self._tenant_id,
+                                  'authentication_mode': authentication_mode,
+                                  'enable_pfs': enable_pfs,
+                                  'encryption_algorithm': encryption_algorithm,
+                                  'authentication_algorithm': authentication_algorithm,
+                                  'dh_group': dh_group,
+                                  'life_time': life_time}}
+        if description:
+            data['isakmp_policy']['description'] = description
+        res = self._do_request('POST', _get_path('vpn/isakmp_policys'), data)
+        return res['isakmp_policy']
+
+    def _isakmp_policy_update(self, id, isakmp_policy=None):
+        path = 'vpn/isakmp_policys/{0}'.format(id)
+        old_isakmp_policy = self._do_request('GET', _get_path(path), None)
+        if isakmp_policy is None:
+            return old_isakmp_policy['isakmp_policy']
+        data = {
+            "isakmp_policy": isakmp_policy
+            }
+        new_isakmp_policy = self._do_request('PUT', _get_path(path), data)
+        return new_isakmp_policy['isakmp_policy']
+
+
+    def _isakmp_policy_delete(self, id):
+        path = 'vpn/isakmp_policys/{0}'.format(id)
+        res = self._do_request('DELETE', _get_path(path), None)
+        return res
+
+    def test_create_isakmp_policy(self, **extras):
+        LOG.info("test to create isakmp policy");
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        expected.update(extras)
+        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
+                       description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        for k in ('id','encryption_algorithm','authentication_algorithm',
+                    'dh_group','life_time'):
+            self.assertTrue(isakmp_policy.get(k, None))
+        self.assertEqual(
+            dict((k, v) for k, v in isakmp_policy.items() if k in expected),
+            expected
+        )
+        res = self._get_resource('isakmp_policy', isakmp_policy['id'])
+        return isakmp_policy
+
+    def test_update_isakmp_policy(self):
+        LOG.info("test to update isakmp_policy");
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
+                       description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        new_expected = {
+                            'name': 'new policy',
+                            'encryption_algorithm': "aesgcm",
+                            'dh_group': "5",
+                            'life_time': 1800
+                    }
+        new_isakmp_policy = self._isakmp_policy_update(isakmp_policy['id'], new_expected)
+        self.assertEqual(isakmp_policy['id'], new_isakmp_policy['id'])
+        self.assertEqual(
+            dict((k, v) for k, v in new_isakmp_policy.items() if k in new_expected),
+            new_expected
+        )
+        return new_isakmp_policy
+
+    def test_list_isakmp_policys(self):
+        LOG.info("test to list isakmp_policys");
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
+                       description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        for k in ('id','encryption_algorithm','authentication_algorithm',
+                    'dh_group','life_time'):
+            self.assertTrue(isakmp_policy.get(k, None))
+        self.assertEqual(
+            dict((k, v) for k, v in isakmp_policy.items() if k in expected),
+            expected
+        )
+        res = self._get_resources('isakmp_policy')
+        print(json.dumps(res, indent=4))
+        return res
+
+
+    def test_delete_isakmp_policy(self):
+        LOG.info("test to delete isakmp_policy");
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
+                       description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        isakmp_policy = self._isakmp_policy_delete(id=isakmp_policy['id'])
+        return
+
+
+    def test_get_isakmp_policys(self):
+        LOG.info("test to get isakmp_policys");
+        isakmp_policy1 = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        isakmp_policy1_get = self._isakmp_policy_create(name=isakmp_policy1['name'], 
+                       description=isakmp_policy1['description'],
+                       encryption_algorithm=isakmp_policy1['encryption_algorithm'],
+                       authentication_algorithm=isakmp_policy1['authentication_algorithm'],
+                       dh_group=isakmp_policy1['dh_group'], life_time=isakmp_policy1['life_time'])
+        isakmp_policy2 = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 1800}
+        isakmp_policy2_get = self._isakmp_policy_create(name=isakmp_policy2['name'], 
+                       description=isakmp_policy2['description'],
+                       encryption_algorithm=isakmp_policy2['encryption_algorithm'],
+                       authentication_algorithm=isakmp_policy2['authentication_algorithm'],
+                       dh_group=isakmp_policy2['dh_group'], life_time=isakmp_policy2['life_time'])
+        isakmp_policys = self._get_resources('isakmp_policy')
+        print "isakmp_policys:"
+        print isakmp_policys
+        self.assertEqual(len(isakmp_policys), 2)
+        self.assertEqual(isakmp_policys[0]['name'], isakmp_policy1_get['name'])
+        self.assertEqual(isakmp_policys[1]['name'], isakmp_policy2_get['name'])
+        self.assertEqual(isakmp_policys[0]['description'], isakmp_policy1_get['description'])
+        self.assertEqual(isakmp_policys[1]['description'], isakmp_policy2_get['description'])
+        r1 = self._get_resource('isakmp_policy', isakmp_policy1_get['id'])
+        r2 = self._get_resource('isakmp_policy', isakmp_policy2_get['id'])
+        self.assertEqual(r1['id'], isakmp_policy1_get['id'])
+        self.assertEqual(r2['id'], isakmp_policy2_get['id'])

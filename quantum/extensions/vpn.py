@@ -40,6 +40,8 @@ class SiteExists(qexception.QuantumException):
 class IsakmpPolicyNotFound(qexception.NotFound):
     message = _("ISAKMP policy %(isakmp_policy_id)s could not be found")
 
+class IsakmpPolicyExists(qexception.QuantumException):
+    message = _("Another Isakmp Policy already exists") 
 
 class IPSecPolicyNotFound(qexception.NotFound):
     message = _("IPSec policy %(ipsec_policy_id)s could not be found")
@@ -158,7 +160,7 @@ RESOURCE_ATTRIBUTE_MAP = {
                                      'validate': {'type:values': ['sha1']},
                                      'default': 'sha1',
                                      'is_visible': True},
-        'enabe_pfs': {'allow_post': True, 'allow_put': True,
+        'enable_pfs': {'allow_post': True, 'allow_put': True,
                       'default': True,
                       'convert_to': attr.convert_to_boolean,
                       'is_visible': True},

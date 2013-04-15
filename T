@@ -1,0 +1,579 @@
+diff --git a/quantum/api/v2/base.py b/quantum/api/v2/base.py
+index 8ddb191..d9e896b 100644
+--- a/quantum/api/v2/base.py
++++ b/quantum/api/v2/base.py
+@@ -124,7 +124,6 @@ class Controller(object):
+         # make sure fields_to_strip is iterable
+         if not fields_to_strip:
+             fields_to_strip = []
+-
+         return dict(item for item in data.iteritems()
+                     if (self._is_visible(item[0]) and
+                         item[0] not in fields_to_strip))
+diff --git a/quantum/db/vpn/vpn_db.py b/quantum/db/vpn/vpn_db.py
+index 7c1bebc..3246b57 100644
+--- a/quantum/db/vpn/vpn_db.py
++++ b/quantum/db/vpn/vpn_db.py
+@@ -62,6 +62,17 @@ class IPSecPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
+     dh_group = sa.Column(sa.String(1), nullable=True);
+     life_time = sa.Column(sa.Integer, nullable=True);
+ 
++class IsakmpPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
++    """Represents a v2 quantum VPN Isakmp Policy."""
++    name = sa.Column(sa.String(32))
++    description = sa.Column(sa.String(255))
++    authentication_mode = sa.Column(sa.String(16), nullable=True);
++    encryption_algorithm = sa.Column(sa.String(16), nullable=True);
++    authentication_algorithm = sa.Column(sa.String(8), nullable=True);
++    enable_pfs = sa.Column(sa.Boolean, nullable = True);
++    dh_group = sa.Column(sa.String(1), nullable=True);
++    life_time = sa.Column(sa.Integer, nullable=True);
++
+ class VPNPluginDb(VPNPluginBase):
+     """
+     A class that wraps the implementation of the Quantum
+@@ -147,6 +158,8 @@ class VPNPluginDb(VPNPluginBase):
+                 raise VPN.SiteNotFound(site_id=id)
+             elif issubclass(model, IPSecPolicy):
+                 raise VPN.IPSecPolicyNotFound(ipsec_policy_id=id)
++            elif issubclass(model, IsakmpPolicy):
++                raise VPN.IsakmpPolicyNotFound(isakmp_policy_id=id)
+             else:
+                 raise
+         return r
+@@ -343,3 +356,77 @@ class VPNPluginDb(VPNPluginBase):
+         return self._get_collection(context, IPSecPolicy,
+                                     self._make_ipsec_policy_dict,
+                                     filters=filters, fields=fields)
++
++
++
++    ########################################################
++    # Isakmp Policy DB access
++    def _make_isakmp_policy_dict(self, isakmpp, fields=None):
++        res = {'id': isakmpp['id'],
++               'tenant_id': isakmpp['tenant_id'],
++               'name': isakmpp['name'],
++               'description': isakmpp['description'],
++               'authentication_mode': isakmpp['authentication_mode'],
++               'enable_pfs': isakmpp['enable_pfs'],
++               'encryption_algorithm': isakmpp['encryption_algorithm'],
++               'authentication_algorithm': isakmpp['authentication_algorithm'],
++               'dh_group': isakmpp['dh_group'],
++               'life_time': isakmpp['life_time']}
++
++        return self._fields(res, fields)
++
++    def create_isakmp_policy(self, context, isakmpp):
++        s = isakmpp['isakmp_policy']
++        tenant_id = self._get_tenant_id_for_create(context, s)
++
++        with context.session.begin(subtransactions=True):
++            isakmpp_db = IsakmpPolicy(id=uuidutils.generate_uuid(),
++                                tenant_id=tenant_id,
++                                name=s['name'],
++                                description=s['description'],
++                                authentication_mode= s['authentication_mode'],
++                                enable_pfs = s['enable_pfs'],
++                                encryption_algorithm=s['encryption_algorithm'],
++                                authentication_algorithm=s['authentication_algorithm'],
++                                dh_group=s['dh_group'],
++                                life_time=s['life_time'])
++
++            try:
++                context.session.add(isakmpp_db)
++                context.session.flush()
++            except sa_exc.IntegrityError:
++                raise vpn.IsakmpPolicyExists()
++
++        return self._make_isakmp_policy_dict(isakmpp_db)
++
++
++    def update_isakmp_policy(self, context, id, isakmpp):
++        s = isakmpp['isakmp_policy']
++        with context.session.begin(subtransactions=True):
++            isakmpp_db = self._get_resource(context, IsakmpPolicy, id)
++            self.assert_modification_allowed(isakmpp_db)
++            if s:
++                try:
++                    print "isakmpp_db.update(s)"
++                    print isakmpp_db
++                    isakmpp_db.update(s)
++                    # To be add validation here
++                    LOG.debug(_("update_isakmp_policy: %s") % id)
++                except sa_exc.IntegrityError:
++                    raise vpn.IsakmpPolicyExists()
++        return self._make_isakmp_policy_dict(isakmpp_db)
++
++    def delete_isakmp_policy(self, context, id):
++        with context.session.begin(subtransactions=True):
++            isakmpp = self._get_resource(context, IsakmpPolicy, id)
++            context.session.delete(isakmpp)
++            context.session.flush()
++
++    def get_isakmp_policy(self, context, id, fields=None):
++        isakmpp = self._get_resource(context, IsakmpPolicy, id)
++        return self._make_isakmp_policy_dict(isakmpp, fields)
++
++    def get_isakmp_policys(self, context, filters=None, fields=None):
++        return self._get_collection(context, IsakmpPolicy,
++                                    self._make_isakmp_policy_dict,
++                                    filters=filters, fields=fields)
+diff --git a/quantum/extensions/vpn.py b/quantum/extensions/vpn.py
+index b452bcf..462d9f4 100644
+--- a/quantum/extensions/vpn.py
++++ b/quantum/extensions/vpn.py
+@@ -40,6 +40,8 @@ class SiteExists(qexception.QuantumException):
+ class IsakmpPolicyNotFound(qexception.NotFound):
+     message = _("ISAKMP policy %(isakmp_policy_id)s could not be found")
+ 
++class IsakmpPolicyExists(qexception.QuantumException):
++    message = _("Another Isakmp Policy already exists") 
+ 
+ class IPSecPolicyNotFound(qexception.NotFound):
+     message = _("IPSec policy %(ipsec_policy_id)s could not be found")
+@@ -158,7 +160,7 @@ RESOURCE_ATTRIBUTE_MAP = {
+                                      'validate': {'type:values': ['sha1']},
+                                      'default': 'sha1',
+                                      'is_visible': True},
+-        'enabe_pfs': {'allow_post': True, 'allow_put': True,
++        'enable_pfs': {'allow_post': True, 'allow_put': True,
+                       'default': True,
+                       'convert_to': attr.convert_to_boolean,
+                       'is_visible': True},
+diff --git a/quantum/plugins/services/agent_vpn/VPNPlugin.py b/quantum/plugins/services/agent_vpn/VPNPlugin.py
+index 7be1c7f..68e594c 100644
+--- a/quantum/plugins/services/agent_vpn/VPNPlugin.py
++++ b/quantum/plugins/services/agent_vpn/VPNPlugin.py
+@@ -150,19 +150,38 @@ class VPNPlugin(vpn_db.VPNPluginDb):
+         return res
+ 
+     def get_isakmp_policys(self, context, filters=None, fields=None):
+-        LOG.debug(_("To be implemented"))
++        res = super(VPNPlugin, self).get_isakmp_policys(context, filters, fields)
++        LOG.debug(_("Get isakmp policys"))
++        return res
+ 
+     def get_isakmp_policy(self, context, id, fields=None):
+-        LOG.debug(_("To be implemented"))
++        res = super(VPNPlugin, self).get_isakmp_policy(context, id, fields)
++        LOG.debug(_("Get isakmp policy: %s"), id)
++        return res
+ 
+     def create_isakmp_policy(self, context, isakmp_policy):
+-        LOG.debug(_("To be implemented"))
++        s = super(VPNPlugin, self).create_isakmp_policy(context, isakmp_policy)
++        self.update_status(context, vpn_db.IsakmpPolicy, s['id'],
++                           constants.PENDING_CREATE)
++        LOG.debug(_("Create isakmp policy: %s") % s['id'])
++
++        s_query = self.get_isakmp_policy(context, s['id'])
++        return s_query
+ 
+     def update_isakmp_policy(self, context, id, isakmp_policy):
+-        LOG.debug(_("To be implemented"))
++        if 'status' not in isakmp_policy['isakmp_policy']:
++            isakmp_policy['isakmp_policy']['status'] = constants.PENDING_UPDATE            
++        s = super(VPNPlugin, self).update_isakmp_policy(context, id, isakmp_policy)
++        LOG.debug(_("Update isakmp policy: %s"), id)
++        # TODO notify vpnagent
++        s_rt = self.get_isakmp_policy(context, id)
++        return s_rt
+ 
+     def delete_isakmp_policy(self, context, id):
+-        LOG.debug(_("To be implemented"))
++        self.update_status(context, vpn_db.IsakmpPolicy, id, constants.PENDING_DELETE)
++        LOG.debug(_("Delete isakmp policy: %s"), id)
++        # TODO notify vpnagent
++        super(VPNPlugin, self).delete_isakmp_policy(context, id)
+ 
+     def get_ipsec_policys(self, context, filters=None, fields=None):
+         res = super(VPNPlugin, self).get_ipsec_policys(context, filters, fields)
+diff --git a/quantum/plugins/vmware/vshield/vpnplugin.py b/quantum/plugins/vmware/vshield/vpnplugin.py
+index 435dc95..5f9f552 100644
+--- a/quantum/plugins/vmware/vshield/vpnplugin.py
++++ b/quantum/plugins/vmware/vshield/vpnplugin.py
+@@ -125,19 +125,44 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
+         return res
+ 
+     def get_isakmp_policys(self, context, filters=None, fields=None):
+-        LOG.debug(_("To be implemented"))
++        res = super(VShieldEdgeVPNPlugin, self).get_isakmp_policys(
++            context, filters, fields)
++        LOG.debug(_("Get isakmp policys"))
++        return res
+ 
+     def get_isakmp_policy(self, context, id, fields=None):
+-        LOG.debug(_("To be implemented"))
++        res = super(VShieldEdgeVPNPlugin, self).get_isakmp_policy(context, id, fields)
++        LOG.debug(_("Get isakmp policy: %s"), id)
++        return res
+ 
+     def create_isakmp_policy(self, context, isakmp_policy):
+-        LOG.debug(_("To be implemented"))
++        with context.session.begin(subtransactions=True):
++            s = super(VShieldEdgeVPNPlugin, self).create_isakmp_policy(context, 
++                                                            isakmp_policy)
++            self.update_status(context, vpn_db.IsakmpPolicy, s['id'],
++                               constants.PENDING_CREATE)
++            LOG.debug(_("Create isakmp policy: %s") % s['id'])
++        s_query = self.get_isakmp_policy(context, s['id'])
++        return s_query
+ 
+     def update_isakmp_policy(self, context, id, isakmp_policy):
+-        LOG.debug(_("To be implemented"))
++        with context.session.begin(subtransactions=True):
++            s = super(VShieldEdgeVPNPlugin, self).update_isakmp_policy(context, 
++                                                                id, isakmp_policy)
++            self.update_status(context, vpn_db.IsakmpPolicy, id,
++                               constants.PENDING_UPDATE)
++            LOG.debug(_("Update isakmp policy: %s"), id)
++
++        s_rt = self.get_isakmp_policy(context, id)
++        return s_rt
+ 
+     def delete_isakmp_policy(self, context, id):
+-        LOG.debug(_("To be implemented"))
++        with context.session.begin(subtransactions=True):
++            isakmp_policy = self.get_isakmp_policy(context, id)
++            self.update_status(context, vpn_db.IsakmpPolicy, id,
++                               constants.PENDING_DELETE)
++            LOG.debug(_("Delete isakmp policy: %s"), id)
++            super(VShieldEdgeVPNPlugin, self).delete_isakmp_policy(context, id)
+ 
+     def create_ipsec_policy(self, context, ipsec_policy):
+         with context.session.begin(subtransactions=True):
+diff --git a/quantum/tests/unit/db/vpn/test_db_vpn.py b/quantum/tests/unit/db/vpn/test_db_vpn.py
+index 0fc8d7e..26b2b29 100644
+--- a/quantum/tests/unit/db/vpn/test_db_vpn.py
++++ b/quantum/tests/unit/db/vpn/test_db_vpn.py
+@@ -176,6 +176,56 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
+                 self._delete('ipsec_policys', ipsec_policy['ipsec_policy']['id'])
+ 
+ 
++################################################################################
++#  Ipsec Policy 
++    def _create_isakmp_policy(self, fmt, name,  
++                     authentication_mode, enable_pfs,
++                     encryption_algorithm, authentication_algorithm, 
++                     dh_group, life_time,
++                     expected_res_status=None, **kwargs):
++        data = {'isakmp_policy': 
++                                {'name': name,
++                                'tenant_id': self._tenant_id,
++                                'authentication_mode': authentication_mode,
++                                'enable_pfs': enable_pfs,
++                                'encryption_algorithm': encryption_algorithm,
++                                'authentication_algorithm': authentication_algorithm,
++                                'dh_group': dh_group,
++                                'life_time': life_time}
++                    }
++        for arg in ('description'):
++            if arg in kwargs and kwargs[arg] is not None:
++                data['isakmp_policy'][arg] = kwargs[arg]
++        isakmp_policy_req = self.new_create_request('isakmp_policys', data, fmt)
++        isakmp_policy_res = isakmp_policy_req.get_response(self.ext_api)
++        if expected_res_status:
++            self.assertEqual(isakmp_policy_res.status_int, expected_res_status)
++
++        return isakmp_policy_res
++
++    @contextlib.contextmanager
++    def isakmp_policy(self, fmt=None, name='isakmp_policy1',
++             authentication_mode='psk', enable_pfs=True,
++             encryption_algorithm='aes256', authentication_algorithm='sha1',
++             dh_group='2', life_time=28800, no_delete=False, **kwargs):
++        if not fmt:
++            fmt = self.fmt
++
++        res = self._create_isakmp_policy(fmt, name,
++                                authentication_mode, enable_pfs,
++                                encryption_algorithm, authentication_algorithm,
++                                dh_group, life_time,
++                                **kwargs)
++        isakmp_policy = self.deserialize(fmt or self.fmt, res)
++        if res.status_int >= 400:
++            raise webob.exc.HTTPClientError(code=res.status_int)
++        try:
++            yield isakmp_policy
++        finally:
++            if not no_delete:
++                self._delete('isakmp_policys', isakmp_policy['isakmp_policy']['id'])
++
++
+ ############################################################################
+ # Test Cases
+ class TestVPN(VPNPluginDbTestCase):
+@@ -346,3 +396,90 @@ class TestVPN(VPNPluginDbTestCase):
+             for k, v in keys:
+                 self.assertEqual(res['ipsec_policys'][0][k], v)
+ 
++
++##########################################################################################
++## Isakmp Policy Test cases
++    def test_create_isakmp_policy(self, **extras):
++        expected = {
++            'name': '',
++            'description': '',
++            'authentication_mode': 'psk',
++            'enable_pfs': True,
++            'encryption_algorithm': 'aes256',
++            'authentication_algorithm': 'sha1', 
++            'dh_group': '2',
++            'life_time': 26000}
++
++        expected.update(extras)
++        name = expected['name']
++        with self.isakmp_policy(name=name, description=expected['description'],
++                       authentication_mode=expected['authentication_mode'],
++                       enable_pfs=expected['enable_pfs'],
++                       encryption_algorithm=expected['encryption_algorithm'],
++                       authentication_algorithm=expected['authentication_algorithm'],
++                       dh_group=expected['dh_group'], 
++                       life_time=expected['life_time'],
++                       **extras) as isakmp_policy:
++            self.assertEqual(
++                dict((k, v)
++                    for k, v in isakmp_policy['isakmp_policy'].items()
++                    if k in expected),
++                expected
++            )
++        return isakmp_policy
++
++
++    def test_update_isakmp_policy(self):
++        name = 'new_isakmp_policy'
++        keys = [('name', name),
++                ('authentication_mode', "x.509"),
++                ('enable_pfs', False),
++                ('encryption_algorithm', "aesgcm"),
++                ('dh_group', "5"),
++                ('life_time', 18000)]
++
++        with self.isakmp_policy(name=name) as isakmp_policy:
++            data = {'isakmp_policy':
++                                {'name': name,
++                                 'authentication_mode': "x.509",
++                                 'enable_pfs': False,
++                                 'encryption_algorithm': "aesgcm",
++                                 'dh_group': "5",
++                                 'life_time': 18000}
++                        }
++            req = self.new_update_request('isakmp_policys', data,
++                                        isakmp_policy['isakmp_policy']['id'])
++            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
++            for k, v in keys:
++                self.assertEqual(res['isakmp_policy'][k], v)
++
++    def test_delete_isakmp_policy(self):
++        with self.isakmp_policy(no_delete=True) as isakmp_policy:
++            req = self.new_delete_request('isakmp_policys', 
++                                        isakmp_policy['isakmp_policy']['id'])
++            res = req.get_response(self.ext_api)
++            self.assertEqual(res.status_int, 204)
++
++    def test_show_isakmp_policy(self):
++        name = "isakmp_policy_show"
++        keys = [('name', name),
++                ('encryption_algorithm', "aes256")]
++        with self.isakmp_policy(name=name) as isakmp_policy:
++            req = self.new_show_request('isakmp_policys',
++                                    isakmp_policy['isakmp_policy']['id'])
++            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
++            for k, v in keys:
++                self.assertEqual(res['isakmp_policy'][k], v)
++
++    def test_list_isakmp_policys(self):
++        name = "isakmp_policys_list"
++        keys = [('name', name),
++                ('encryption_algorithm', "aes256")]
++        with self.isakmp_policy(name=name) as isakmp_policy:
++            keys.append(('id', isakmp_policy['isakmp_policy']['id']))
++            req = self.new_list_request('isakmp_policys')
++            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
++            self.assertEqual(len(res), 1)
++            for k, v in keys:
++                self.assertEqual(res['isakmp_policys'][0][k], v)
++
+diff --git a/quantum/tests/unit/test_vpn.py b/quantum/tests/unit/test_vpn.py
+index 833e3d5..3319458 100644
+--- a/quantum/tests/unit/test_vpn.py
++++ b/quantum/tests/unit/test_vpn.py
+@@ -535,3 +535,177 @@ class VPNTestCase(base.BaseTestCase):
+         r2 = self._get_resource('ipsec_policy', ipsec_policy2_get['id'])
+         self.assertEqual(r1['id'], ipsec_policy1_get['id'])
+         self.assertEqual(r2['id'], ipsec_policy2_get['id'])
++
++
++############################################################################################
++## Isakmp Policy test
++    def _isakmp_policy_create(self, name='isakmp_policy1',
++                            authentication_mode='psk',
++                            enable_pfs=True,
++                            encryption_algorithm='aes256', authentication_algorithm='sha1',
++                            dh_group='2', life_time=28000,description=None):
++        data = {'isakmp_policy': {'name': name,
++                                  'tenant_id': self._tenant_id,
++                                  'authentication_mode': authentication_mode,
++                                  'enable_pfs': enable_pfs,
++                                  'encryption_algorithm': encryption_algorithm,
++                                  'authentication_algorithm': authentication_algorithm,
++                                  'dh_group': dh_group,
++                                  'life_time': life_time}}
++        if description:
++            data['isakmp_policy']['description'] = description
++        res = self._do_request('POST', _get_path('vpn/isakmp_policys'), data)
++        return res['isakmp_policy']
++
++    def _isakmp_policy_update(self, id, isakmp_policy=None):
++        path = 'vpn/isakmp_policys/{0}'.format(id)
++        old_isakmp_policy = self._do_request('GET', _get_path(path), None)
++        if isakmp_policy is None:
++            return old_isakmp_policy['isakmp_policy']
++        data = {
++            "isakmp_policy": isakmp_policy
++            }
++        new_isakmp_policy = self._do_request('PUT', _get_path(path), data)
++        return new_isakmp_policy['isakmp_policy']
++
++
++    def _isakmp_policy_delete(self, id):
++        path = 'vpn/isakmp_policys/{0}'.format(id)
++        res = self._do_request('DELETE', _get_path(path), None)
++        return res
++
++    def test_create_isakmp_policy(self, **extras):
++        LOG.info("test to create isakmp policy");
++        expected = {
++            'name': '',
++            'description': '',
++            'encryption_algorithm': 'aes256',
++            'authentication_algorithm': 'sha1', 
++            'dh_group': '2',
++            'life_time': 3600}
++        expected.update(extras)
++        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
++                       description=expected['description'],
++                       encryption_algorithm=expected['encryption_algorithm'],
++                       authentication_algorithm=expected['authentication_algorithm'],
++                       dh_group=expected['dh_group'], life_time=expected['life_time'])
++        for k in ('id','encryption_algorithm','authentication_algorithm',
++                    'dh_group','life_time'):
++            self.assertTrue(isakmp_policy.get(k, None))
++        self.assertEqual(
++            dict((k, v) for k, v in isakmp_policy.items() if k in expected),
++            expected
++        )
++        res = self._get_resource('isakmp_policy', isakmp_policy['id'])
++        return isakmp_policy
++
++    def test_update_isakmp_policy(self):
++        LOG.info("test to update isakmp_policy");
++        expected = {
++            'name': '',
++            'description': '',
++            'encryption_algorithm': 'aes256',
++            'authentication_algorithm': 'sha1', 
++            'dh_group': '2',
++            'life_time': 3600}
++        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
++                       description=expected['description'],
++                       encryption_algorithm=expected['encryption_algorithm'],
++                       authentication_algorithm=expected['authentication_algorithm'],
++                       dh_group=expected['dh_group'], life_time=expected['life_time'])
++        new_expected = {
++                            'name': 'new policy',
++                            'encryption_algorithm': "aesgcm",
++                            'dh_group': "5",
++                            'life_time': 1800
++                    }
++        new_isakmp_policy = self._isakmp_policy_update(isakmp_policy['id'], new_expected)
++        self.assertEqual(isakmp_policy['id'], new_isakmp_policy['id'])
++        self.assertEqual(
++            dict((k, v) for k, v in new_isakmp_policy.items() if k in new_expected),
++            new_expected
++        )
++        return new_isakmp_policy
++
++    def test_list_isakmp_policys(self):
++        LOG.info("test to list isakmp_policys");
++        expected = {
++            'name': '',
++            'description': '',
++            'encryption_algorithm': 'aes256',
++            'authentication_algorithm': 'sha1', 
++            'dh_group': '2',
++            'life_time': 3600}
++        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
++                       description=expected['description'],
++                       encryption_algorithm=expected['encryption_algorithm'],
++                       authentication_algorithm=expected['authentication_algorithm'],
++                       dh_group=expected['dh_group'], life_time=expected['life_time'])
++        for k in ('id','encryption_algorithm','authentication_algorithm',
++                    'dh_group','life_time'):
++            self.assertTrue(isakmp_policy.get(k, None))
++        self.assertEqual(
++            dict((k, v) for k, v in isakmp_policy.items() if k in expected),
++            expected
++        )
++        res = self._get_resources('isakmp_policy')
++        print(json.dumps(res, indent=4))
++        return res
++
++
++    def test_delete_isakmp_policy(self):
++        LOG.info("test to delete isakmp_policy");
++        expected = {
++            'name': '',
++            'description': '',
++            'encryption_algorithm': 'aes256',
++            'authentication_algorithm': 'sha1', 
++            'dh_group': '2',
++            'life_time': 3600}
++        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
++                       description=expected['description'],
++                       encryption_algorithm=expected['encryption_algorithm'],
++                       authentication_algorithm=expected['authentication_algorithm'],
++                       dh_group=expected['dh_group'], life_time=expected['life_time'])
++        isakmp_policy = self._isakmp_policy_delete(id=isakmp_policy['id'])
++        return
++
++
++    def test_get_isakmp_policys(self):
++        LOG.info("test to get isakmp_policys");
++        isakmp_policy1 = {
++            'name': '',
++            'description': '',
++            'encryption_algorithm': 'aes256',
++            'authentication_algorithm': 'sha1', 
++            'dh_group': '2',
++            'life_time': 3600}
++        isakmp_policy1_get = self._isakmp_policy_create(name=isakmp_policy1['name'], 
++                       description=isakmp_policy1['description'],
++                       encryption_algorithm=isakmp_policy1['encryption_algorithm'],
++                       authentication_algorithm=isakmp_policy1['authentication_algorithm'],
++                       dh_group=isakmp_policy1['dh_group'], life_time=isakmp_policy1['life_time'])
++        isakmp_policy2 = {
++            'name': '',
++            'description': '',
++            'encryption_algorithm': 'aes256',
++            'authentication_algorithm': 'sha1', 
++            'dh_group': '2',
++            'life_time': 1800}
++        isakmp_policy2_get = self._isakmp_policy_create(name=isakmp_policy2['name'], 
++                       description=isakmp_policy2['description'],
++                       encryption_algorithm=isakmp_policy2['encryption_algorithm'],
++                       authentication_algorithm=isakmp_policy2['authentication_algorithm'],
++                       dh_group=isakmp_policy2['dh_group'], life_time=isakmp_policy2['life_time'])
++        isakmp_policys = self._get_resources('isakmp_policy')
++        print "isakmp_policys:"
++        print isakmp_policys
++        self.assertEqual(len(isakmp_policys), 2)
++        self.assertEqual(isakmp_policys[0]['name'], isakmp_policy1_get['name'])
++        self.assertEqual(isakmp_policys[1]['name'], isakmp_policy2_get['name'])
++        self.assertEqual(isakmp_policys[0]['description'], isakmp_policy1_get['description'])
++        self.assertEqual(isakmp_policys[1]['description'], isakmp_policy2_get['description'])
++        r1 = self._get_resource('isakmp_policy', isakmp_policy1_get['id'])
++        r2 = self._get_resource('isakmp_policy', isakmp_policy2_get['id'])
++        self.assertEqual(r1['id'], isakmp_policy1_get['id'])
++        self.assertEqual(r2['id'], isakmp_policy2_get['id'])

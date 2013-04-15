@@ -62,6 +62,17 @@ class IPSecPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     dh_group = sa.Column(sa.String(1), nullable=True);
     life_time = sa.Column(sa.Integer, nullable=True);
 
+class IsakmpPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
+    """Represents a v2 quantum VPN Isakmp Policy."""
+    name = sa.Column(sa.String(32))
+    description = sa.Column(sa.String(255))
+    authentication_mode = sa.Column(sa.String(16), nullable=True);
+    encryption_algorithm = sa.Column(sa.String(16), nullable=True);
+    authentication_algorithm = sa.Column(sa.String(8), nullable=True);
+    enable_pfs = sa.Column(sa.Boolean, nullable = True);
+    dh_group = sa.Column(sa.String(1), nullable=True);
+    life_time = sa.Column(sa.Integer, nullable=True);
+
 class VPNPluginDb(VPNPluginBase):
     """
     A class that wraps the implementation of the Quantum
@@ -147,6 +158,8 @@ class VPNPluginDb(VPNPluginBase):
                 raise VPN.SiteNotFound(site_id=id)
             elif issubclass(model, IPSecPolicy):
                 raise VPN.IPSecPolicyNotFound(ipsec_policy_id=id)
+            elif issubclass(model, IsakmpPolicy):
+                raise VPN.IsakmpPolicyNotFound(isakmp_policy_id=id)
             else:
                 raise
         return r
@@ -342,4 +355,78 @@ class VPNPluginDb(VPNPluginBase):
     def get_ipsec_policys(self, context, filters=None, fields=None):
         return self._get_collection(context, IPSecPolicy,
                                     self._make_ipsec_policy_dict,
+                                    filters=filters, fields=fields)
+
+
+
+    ########################################################
+    # Isakmp Policy DB access
+    def _make_isakmp_policy_dict(self, isakmpp, fields=None):
+        res = {'id': isakmpp['id'],
+               'tenant_id': isakmpp['tenant_id'],
+               'name': isakmpp['name'],
+               'description': isakmpp['description'],
+               'authentication_mode': isakmpp['authentication_mode'],
+               'enable_pfs': isakmpp['enable_pfs'],
+               'encryption_algorithm': isakmpp['encryption_algorithm'],
+               'authentication_algorithm': isakmpp['authentication_algorithm'],
+               'dh_group': isakmpp['dh_group'],
+               'life_time': isakmpp['life_time']}
+
+        return self._fields(res, fields)
+
+    def create_isakmp_policy(self, context, isakmpp):
+        s = isakmpp['isakmp_policy']
+        tenant_id = self._get_tenant_id_for_create(context, s)
+
+        with context.session.begin(subtransactions=True):
+            isakmpp_db = IsakmpPolicy(id=uuidutils.generate_uuid(),
+                                tenant_id=tenant_id,
+                                name=s['name'],
+                                description=s['description'],
+                                authentication_mode= s['authentication_mode'],
+                                enable_pfs = s['enable_pfs'],
+                                encryption_algorithm=s['encryption_algorithm'],
+                                authentication_algorithm=s['authentication_algorithm'],
+                                dh_group=s['dh_group'],
+                                life_time=s['life_time'])
+
+            try:
+                context.session.add(isakmpp_db)
+                context.session.flush()
+            except sa_exc.IntegrityError:
+                raise vpn.IsakmpPolicyExists()
+
+        return self._make_isakmp_policy_dict(isakmpp_db)
+
+
+    def update_isakmp_policy(self, context, id, isakmpp):
+        s = isakmpp['isakmp_policy']
+        with context.session.begin(subtransactions=True):
+            isakmpp_db = self._get_resource(context, IsakmpPolicy, id)
+            self.assert_modification_allowed(isakmpp_db)
+            if s:
+                try:
+                    print "isakmpp_db.update(s)"
+                    print isakmpp_db
+                    isakmpp_db.update(s)
+                    # To be add validation here
+                    LOG.debug(_("update_isakmp_policy: %s") % id)
+                except sa_exc.IntegrityError:
+                    raise vpn.IsakmpPolicyExists()
+        return self._make_isakmp_policy_dict(isakmpp_db)
+
+    def delete_isakmp_policy(self, context, id):
+        with context.session.begin(subtransactions=True):
+            isakmpp = self._get_resource(context, IsakmpPolicy, id)
+            context.session.delete(isakmpp)
+            context.session.flush()
+
+    def get_isakmp_policy(self, context, id, fields=None):
+        isakmpp = self._get_resource(context, IsakmpPolicy, id)
+        return self._make_isakmp_policy_dict(isakmpp, fields)
+
+    def get_isakmp_policys(self, context, filters=None, fields=None):
+        return self._get_collection(context, IsakmpPolicy,
+                                    self._make_isakmp_policy_dict,
                                     filters=filters, fields=fields)
