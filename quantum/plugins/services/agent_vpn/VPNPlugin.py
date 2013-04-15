@@ -165,19 +165,40 @@ class VPNPlugin(vpn_db.VPNPluginDb):
         LOG.debug(_("To be implemented"))
 
     def get_ipsec_policys(self, context, filters=None, fields=None):
-        LOG.debug(_("To be implemented"))
+        res = super(VPNPlugin, self).get_ipsec_policys(context, filters, fields)
+        LOG.debug(_("Get ipsec policys"))
+        return res
 
     def get_ipsec_policy(self, context, id, fields=None):
-        LOG.debug(_("To be implemented"))
+        res = super(VPNPlugin, self).get_ipsec_policy(context, id, fields)
+        LOG.debug(_("Get ipsec policy: %s"), id)
+        return res
 
     def create_ipsec_policy(self, context, ipsec_policy):
-        LOG.debug(_("To be implemented"))
+        s = super(VPNPlugin, self).create_ipsec_policy(context, ipsec_policy)
+        self.update_status(context, vpn_db.IPSecPolicy, s['id'],
+                           constants.PENDING_CREATE)
+        LOG.debug(_("Create ipsec policy: %s") % s['id'])
+
+        s_query = self.get_ipsec_policy(context, s['id'])
+        return s_query
 
     def update_ipsec_policy(self, context, id, ipsec_policy):
-        LOG.debug(_("To be implemented"))
+        if 'status' not in ipsec_policy['ipsec_policy']:
+            ipsec_policy['ipsec_policy']['status'] = constants.PENDING_UPDATE            
+        s = super(VPNPlugin, self).update_ipsec_policy(context, id, ipsec_policy)
+        LOG.debug(_("Update ipsec policy: %s"), id)
+
+        # TODO notify vpnagent
+        s_rt = self.get_ipsec_policy(context, id)
+        return s_rt
 
     def delete_ipsec_policy(self, context, id):
-        LOG.debug(_("To be implemented"))
+        self.update_status(context, vpn_db.IPSecPolicy, id, constants.PENDING_DELETE)
+        LOG.debug(_("Delete ipsec policy: %s"), id)
+
+        # TODO notify vpnagent
+        super(VPNPlugin, self).delete_ipsec_policy(context, id)
 
     def get_trust_profiles(self, context, filters=None, fields=None):
         pass

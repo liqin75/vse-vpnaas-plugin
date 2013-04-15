@@ -53,6 +53,15 @@ class Site(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     pri_networks = sa.Column(sa.String(2048), nullable=False);
     subnet_id = sa.Column(sa.String(64), nullable=True);
 
+class IPSecPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
+    """Represents a v2 quantum VPN Ipsec Policy."""
+    name = sa.Column(sa.String(32))
+    description = sa.Column(sa.String(255))
+    encryption_algorithm = sa.Column(sa.String(16), nullable=True);
+    authentication_algorithm = sa.Column(sa.String(8), nullable=True);
+    dh_group = sa.Column(sa.String(1), nullable=True);
+    life_time = sa.Column(sa.Integer, nullable=True);
+
 class VPNPluginDb(VPNPluginBase):
     """
     A class that wraps the implementation of the Quantum
@@ -136,6 +145,8 @@ class VPNPluginDb(VPNPluginBase):
         except exc.NoResultFound:
             if issubclass(model, Site):
                 raise VPN.SiteNotFound(site_id=id)
+            elif issubclass(model, IPSecPolicy):
+                raise VPN.IPSecPolicyNotFound(ipsec_policy_id=id)
             else:
                 raise
         return r
@@ -185,6 +196,7 @@ class VPNPluginDb(VPNPluginBase):
                'mtu': site['mtu']}
 
         return self._fields(res, fields)
+
 
     def _subnets_to_str(self, pri_networks):
         res = ""
@@ -259,4 +271,75 @@ class VPNPluginDb(VPNPluginBase):
     def get_sites(self, context, filters=None, fields=None):
         return self._get_collection(context, Site,
                                     self._make_site_dict,
+                                    filters=filters, fields=fields)
+
+
+    ########################################################
+    # Ipsec Policy DB access
+    def _make_ipsec_policy_dict(self, ipsecp, fields=None):
+        res = {'id': ipsecp['id'],
+               'tenant_id': ipsecp['tenant_id'],
+               'name': ipsecp['name'],
+               'description': ipsecp['description'],
+               'encryption_algorithm': ipsecp['encryption_algorithm'],
+               'authentication_algorithm': ipsecp['authentication_algorithm'],
+               'dh_group': ipsecp['dh_group'],
+               'life_time': ipsecp['life_time']}
+
+        return self._fields(res, fields)
+
+    def create_ipsec_policy(self, context, ipsecp):
+        s = ipsecp['ipsec_policy']
+        tenant_id = self._get_tenant_id_for_create(context, s)
+
+        with context.session.begin(subtransactions=True):
+            ipsecp_db = IPSecPolicy(id=uuidutils.generate_uuid(),
+                                tenant_id=tenant_id,
+                                name=s['name'],
+                                description=s['description'],
+                                encryption_algorithm=s['encryption_algorithm'],
+                                authentication_algorithm=s['authentication_algorithm'],
+                                dh_group=s['dh_group'],
+                                life_time=s['life_time'])
+
+            try:
+                context.session.add(ipsecp_db)
+                context.session.flush()
+            except sa_exc.IntegrityError:
+                raise vpn.IPSecPolicyExists()
+
+        return self._make_ipsec_policy_dict(ipsecp_db)
+
+
+    def update_ipsec_policy(self, context, id, ipsecp):
+        s = ipsecp['ipsec_policy']
+
+        with context.session.begin(subtransactions=True):
+            ipsecp_db = self._get_resource(context, IPSecPolicy, id)
+
+            self.assert_modification_allowed(ipsecp_db)
+
+            if s:
+                try:
+                    ipsecp_db.update(s)
+                    # To be add validation here
+                    LOG.debug(_("update_ipsec_policy: %s") % id)
+                except sa_exc.IntegrityError:
+                    raise vpn.IPSecPolicyExists()
+
+        return self._make_ipsec_policy_dict(ipsecp_db)
+
+    def delete_ipsec_policy(self, context, id):
+        with context.session.begin(subtransactions=True):
+            ipsecp = self._get_resource(context, IPSecPolicy, id)
+            context.session.delete(ipsecp)
+            context.session.flush()
+
+    def get_ipsec_policy(self, context, id, fields=None):
+        ipsecp = self._get_resource(context, IPSecPolicy, id)
+        return self._make_ipsec_policy_dict(ipsecp, fields)
+
+    def get_ipsec_policys(self, context, filters=None, fields=None):
+        return self._get_collection(context, IPSecPolicy,
+                                    self._make_ipsec_policy_dict,
                                     filters=filters, fields=fields)

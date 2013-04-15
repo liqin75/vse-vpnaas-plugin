@@ -130,11 +130,59 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
                 if not no_delete:
                     self._delete('sites', site['site']['id'])
 
+
+################################################################################
+#  Ipsec Policy 
+    def _create_ipsec_policy(self, fmt, name, encryption_algorithm, 
+                     authentication_algorithm, dh_group, life_time,
+                     expected_res_status=None, **kwargs):
+        data = {'ipsec_policy': 
+                                {'name': name,
+                                'tenant_id': self._tenant_id,
+                                'encryption_algorithm': encryption_algorithm,
+                                'authentication_algorithm': authentication_algorithm,
+                                'dh_group': dh_group,
+                                'life_time': life_time}
+                    }
+        for arg in ('description'):
+            if arg in kwargs and kwargs[arg] is not None:
+                data['ipsec_policy'][arg] = kwargs[arg]
+
+        ipsec_policy_req = self.new_create_request('ipsec_policys', data, fmt)
+        ipsec_policy_res = ipsec_policy_req.get_response(self.ext_api)
+        if expected_res_status:
+            self.assertEqual(ipsec_policy_res.status_int, expected_res_status)
+
+        return ipsec_policy_res
+
+    @contextlib.contextmanager
+    def ipsec_policy(self, fmt=None, name='ipsec_policy1',
+             encryption_algorithm='aes256', authentication_algorithm='sha1',
+             dh_group='2', life_time=3600, no_delete=False, **kwargs):
+        if not fmt:
+            fmt = self.fmt
+
+        res = self._create_ipsec_policy(fmt, name,
+                                encryption_algorithm, authentication_algorithm,
+                                dh_group, life_time,
+                                **kwargs)
+        ipsec_policy = self.deserialize(fmt or self.fmt, res)
+        if res.status_int >= 400:
+            raise webob.exc.HTTPClientError(code=res.status_int)
+        try:
+            yield ipsec_policy
+        finally:
+            if not no_delete:
+                self._delete('ipsec_policys', ipsec_policy['ipsec_policy']['id'])
+
+
+############################################################################
+# Test Cases
 class TestVPN(VPNPluginDbTestCase):
     def test_create_site(self, **extras):
         expected = {
             'name': 'site1',
-            'description': '',
+            'description': "",
             'local_endpoint': "10.117.35.202",
             'peer_endpoint': "10.117.35.203",
             'local_id': "10.117.35.202",
@@ -222,9 +270,79 @@ class TestVPN(VPNPluginDbTestCase):
                 self.assertEqual(res['sites'][0][k], v)
 
 
-    def test_create_ipsecvpn(self):
-        site_name = "site3"
+    def test_create_ipsec_policy(self, **extras):
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+
+        expected.update(extras)
+        name = expected['name']
+        with self.ipsec_policy(name=name, description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], 
+                       life_time=expected['life_time'],
+                       **extras) as ipsec_policy:
+            self.assertEqual(
+                dict((k, v)
+                    for k, v in ipsec_policy['ipsec_policy'].items()
+                    if k in expected),
+                expected
+            )
+        return ipsec_policy
 
 
-class TestVPNXML(TestVPN):
-    fmt = 'json'
+    def test_update_ipsec_policy(self):
+        name = 'new_ipsec_policy'
+        keys = [('name', name),
+                ('encryption_algorithm', "aesgcm"),
+                 ('dh_group', "5"),
+                ('life_time', 1800)]
+
+        with self.ipsec_policy(name=name) as ipsec_policy:
+            data = {'ipsec_policy':
+                                {'name': name,
+                                 'encryption_algorithm': "aesgcm",
+                                 'dh_group': "5",
+                                 'life_time': 1800}
+                        }
+            req = self.new_update_request('ipsec_policys', data,
+                                        ipsec_policy['ipsec_policy']['id'])
+            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
+            for k, v in keys:
+                self.assertEqual(res['ipsec_policy'][k], v)
+
+    def test_delete_ipsec_policy(self):
+        with self.ipsec_policy(no_delete=True) as ipsec_policy:
+            req = self.new_delete_request('ipsec_policys', 
+                                        ipsec_policy['ipsec_policy']['id'])
+            res = req.get_response(self.ext_api)
+            self.assertEqual(res.status_int, 204)
+
+    def test_show_ipsec_policy(self):
+        name = "ipsec_policy_show"
+        keys = [('name', name),
+                ('encryption_algorithm', "aes256")]
+        with self.ipsec_policy(name=name) as ipsec_policy:
+            req = self.new_show_request('ipsec_policys',
+                                    ipsec_policy['ipsec_policy']['id'])
+            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
+            for k, v in keys:
+                self.assertEqual(res['ipsec_policy'][k], v)
+
+    def test_list_ipsec_policys(self):
+        name = "ipsec_policys_list"
+        keys = [('name', name),
+                ('encryption_algorithm', "aes256")]
+        with self.ipsec_policy(name=name) as ipsec_policy:
+            keys.append(('id', ipsec_policy['ipsec_policy']['id']))
+            req = self.new_list_request('ipsec_policys')
+            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
+            self.assertEqual(len(res), 1)
+            for k, v in keys:
+                self.assertEqual(res['ipsec_policys'][0][k], v)
+

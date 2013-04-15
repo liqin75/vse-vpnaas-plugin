@@ -7,8 +7,8 @@ import os
 import lib
 
 vpnService = lib.qService + '/vpn'
-tenantId = "202e69af6fc14e449744140034f977e5"
-EdgeUrl = "10.117.35.99"
+tenantId="202e69af6fc14e449744140034f977e5"
+EdgeUrl = "10.117.35.38"
 
 def createSite(tenant_id, subnet_id, name, description, local_endpoint,
 			   local_id, peer_endpoint, peer_id, pri_networks, psk, mtu, location=None):
@@ -65,9 +65,9 @@ if len(sites) >= 1:
 
 #test create_site
 print '\n\nEDGE STATS:'
-os.system("./restjson4.sh GET 10.117.35.99 /edge-1/ipsec/statistics")
+os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/statistics")
 print '\n\nEDGE CONFIG:'
-os.system("./restjson4.sh GET 10.117.35.99 /edge-1/ipsec/config")
+os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/config")
 site = createSite(
 				  tenant_id = tenantId,
                   subnet_id = "0c798ed8-33ba-11e2-8b28-000c291c4d14",
@@ -75,14 +75,14 @@ site = createSite(
                   description = '',
                   local_endpoint = "10.117.35.202",
                   peer_endpoint = "10.117.35.203",
-                  local_id = "10.117.35.202",
+                  local_id = "192.168.2.11",
                   peer_id = "10.117.35.203",
-                  psk = 'hello123',
+                  psk = '123',
                   mtu = 1500,
                   pri_networks = [
                         {
-                           'local_subnets': "192.168.1.0/24,192.168.2.0/24",
-                           'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
+                           'local_subnets': "192.168.1.0/24",
+                           'peer_subnets': "192.168.11.0/24"
                         }])
 
 #test get_sites
@@ -111,14 +111,14 @@ update_site = {
            "description": "this is the updated site",
            "local_endpoint": "10.117.35.202",
            "peer_endpoint": "10.117.35.204",
-           "local_id": "10.117.35.202",
+           "local_id": "192.168.2.11",
            "peer_id": "10.117.35.204",
            "psk": "new hello123",
            "mtu": 1800,
            "pri_networks" : [
                  {
-                    'local_subnets': "192.168.2.0/24,192.168.4.0/24",
-                    'peer_subnets': "192.168.13.0/24,192.168.23.0/24"
+                    'local_subnets': "192.168.2.0/24",
+                    'peer_subnets': "192.168.13.0/24"
                  }],
           }
     }

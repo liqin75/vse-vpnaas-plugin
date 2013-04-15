@@ -41,8 +41,12 @@ class IsakmpPolicyNotFound(qexception.NotFound):
     message = _("ISAKMP policy %(isakmp_policy_id)s could not be found")
 
 
-class IpsecPolicyNotFound(qexception.NotFound):
+class IPSecPolicyNotFound(qexception.NotFound):
     message = _("IPSec policy %(ipsec_policy_id)s could not be found")
+
+
+class IPSecPolicyExists(qexception.QuantumException):
+    message = _("Another Ipsec Policy already exists") 
 
 
 class TrustProfileNotFound(qexception.NotFound):
