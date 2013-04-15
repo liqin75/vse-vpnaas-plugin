@@ -28,7 +28,7 @@ from vpnapi import VPNAPI
 
 LOG = logging.getLogger(__name__)
 
-edgeUri = 'https://10.117.35.99'
+edgeUri = 'https://10.117.35.38'
 edgeId = 'edge-1'
 edgeUser = 'admin'
 edgePasswd = 'default'
@@ -139,20 +139,43 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
     def delete_isakmp_policy(self, context, id):
         LOG.debug(_("To be implemented"))
 
-    def get_ipsec_policys(self, context, filters=None, fields=None):
-        LOG.debug(_("To be implemented"))
-
-    def get_ipsec_policy(self, context, id, fields=None):
-        LOG.debug(_("To be implemented"))
-
     def create_ipsec_policy(self, context, ipsec_policy):
-        LOG.debug(_("To be implemented"))
+        with context.session.begin(subtransactions=True):
+            s = super(VShieldEdgeVPNPlugin, self).create_ipsec_policy(context, ipsec_policy)
+            self.update_status(context, vpn_db.IPSecPolicy, s['id'],
+                               constants.PENDING_CREATE)
+            LOG.debug(_("Create ipsec policy: %s") % s['id'])
+        s_query = self.get_ipsec_policy(context, s['id'])
+        return s_query
 
     def update_ipsec_policy(self, context, id, ipsec_policy):
-        LOG.debug(_("To be implemented"))
+        with context.session.begin(subtransactions=True):
+            s = super(VShieldEdgeVPNPlugin, self).update_ipsec_policy(context, id, ipsec_policy)
+            self.update_status(context, vpn_db.IPSecPolicy, id,
+                               constants.PENDING_UPDATE)
+            LOG.debug(_("Update ipsec policy: %s"), id)
+
+        s_rt = self.get_ipsec_policy(context, id)
+        return s_rt
 
     def delete_ipsec_policy(self, context, id):
-        LOG.debug(_("To be implemented"))
+        with context.session.begin(subtransactions=True):
+            ipsec_policy = self.get_ipsec_policy(context, id)
+            self.update_status(context, vpn_db.IPSecPolicy, id,
+                               constants.PENDING_DELETE)
+            LOG.debug(_("Delete ipsec policy: %s"), id)
+            super(VShieldEdgeVPNPlugin, self).delete_ipsec_policy(context, id)
+
+    def get_ipsec_policy(self, context, id, fields=None):
+        res = super(VShieldEdgeVPNPlugin, self).get_ipsec_policy(context, id, fields)
+        LOG.debug(_("Get ipsec policy: %s"), id)
+        return res
+
+    def get_ipsec_policys(self, context, filters=None, fields=None):
+        res = super(VShieldEdgeVPNPlugin, self).get_ipsec_policys(
+            context, filters, fields)
+        LOG.debug(_("Get ipsec policys"))
+        return res
 
     def get_trust_profiles(self, context, filters=None, fields=None):
         pass

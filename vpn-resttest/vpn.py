@@ -8,7 +8,11 @@ import lib
 
 vpnService = lib.qService + '/vpn'
 tenantId="202e69af6fc14e449744140034f977e5"
-EdgeUrl = "10.117.35.38"
+edgeUri = "10.117.35.38"
+edgeId = 'edge-1'
+edgeUser = 'admin'
+edgePasswd = 'default'
+
 
 def createSite(tenant_id, subnet_id, name, description, local_endpoint,
 			   local_id, peer_endpoint, peer_id, pri_networks, psk, mtu, location=None):
@@ -65,9 +69,11 @@ if len(sites) >= 1:
 
 #test create_site
 print '\n\nEDGE STATS:'
-os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/statistics")
+os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
+            edgeId + "/ipsec/statistics")
 print '\n\nEDGE CONFIG:'
-os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/config")
+os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
+            edgeId + "/ipsec/config")
 site = createSite(
 				  tenant_id = tenantId,
                   subnet_id = "0c798ed8-33ba-11e2-8b28-000c291c4d14",
@@ -99,9 +105,11 @@ site = getSite(sites[0]['id'])
 print '\n\nSITE STATS:'
 print json.dumps(statsSite(sites[0]['id']), indent=4)
 print '\n\nCREATE EDGE STATS:'
-os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/statistics")
+os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
+            edgeId + "/ipsec/statistics")
 print '\n\nCREATE EDGE CONFIG:'
-os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/config")
+os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
+            edgeId + "/ipsec/config")
 
 
 ##test update_site
@@ -129,9 +137,11 @@ print json.dumps(sites, indent=4)
 print '\n\nUPDATE SITE STATS:'
 print json.dumps(statsSite(sites[0]['id']), indent=4)
 print '\n\nUPDATE EDGE STATS:'
-os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/statistics")
+os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
+            edgeId + "/ipsec/statistics")
 print '\n\nUPDATE EDGE CONFIG:'
-os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/config")
+os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
+            edgeId + "/ipsec/config")
 
 
 #test delete_site
@@ -141,8 +151,8 @@ if len(sites) >= 1:
 	print 'failed to delete the site'
 	print json.dumps(sites,indent=4)
 print '\n\nDELETE EDGE STATS:'
-os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/statistics")
+os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
+            edgeId + "/ipsec/statistics")
 print '\n\nDELETE EDGE CONFIG:'
-os.system("./restjson4.sh " + "GET " + EdgeUrl + " " + "/edge-1/ipsec/config")
-
-
+os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
+            edgeId + "/ipsec/config")

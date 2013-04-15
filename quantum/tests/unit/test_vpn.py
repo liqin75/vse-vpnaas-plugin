@@ -369,3 +369,169 @@ class VPNTestCase(base.BaseTestCase):
                                  )
         res = self._stats(id=site['id'])
         return
+
+
+    def _ipsec_policy_create(self, name='ipsec_policy1',
+             encryption_algorithm='aes256', authentication_algorithm='sha1',
+             dh_group='2', life_time=3600,description=None):
+        data = {'ipsec_policy': {'name': name,
+                                  'tenant_id': self._tenant_id,
+                                  'encryption_algorithm': encryption_algorithm,
+                                  'authentication_algorithm': authentication_algorithm,
+                                  'dh_group': dh_group,
+                                  'life_time': life_time}}
+        if description:
+            data['ipsec_policy']['description'] = description
+        res = self._do_request('POST', _get_path('vpn/ipsec_policys'), data)
+        return res['ipsec_policy']
+
+    def _ipsec_policy_update(self, id, ipsec_policy=None):
+        path = 'vpn/ipsec_policys/{0}'.format(id)
+        old_ipsec_policy = self._do_request('GET', _get_path(path), None)
+        if ipsec_policy is None:
+            return old_ipsec_policy['ipsec_policy']
+        data = {
+            "ipsec_policy": ipsec_policy
+            }
+        new_ipsec_policy = self._do_request('PUT', _get_path(path), data)
+        return new_ipsec_policy['ipsec_policy']
+
+
+    def _ipsec_policy_delete(self, id):
+        path = 'vpn/ipsec_policys/{0}'.format(id)
+        res = self._do_request('DELETE', _get_path(path), None)
+        return res
+
+    def test_create_ipsec_policy(self, **extras):
+        LOG.info("test to create ipsec policy");
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        expected.update(extras)
+        ipsec_policy = self._ipsec_policy_create(name=expected['name'], 
+                       description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        for k in ('id','encryption_algorithm','authentication_algorithm',
+                    'dh_group','life_time'):
+            self.assertTrue(ipsec_policy.get(k, None))
+        self.assertEqual(
+            dict((k, v) for k, v in ipsec_policy.items() if k in expected),
+            expected
+        )
+        res = self._get_resource('ipsec_policy', ipsec_policy['id'])
+        return ipsec_policy
+
+    def test_update_ipsec_policy(self):
+        LOG.info("test to update ipsec_policy");
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        ipsec_policy = self._ipsec_policy_create(name=expected['name'], 
+                       description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        new_expected = {
+                            'name': 'new policy',
+                            'encryption_algorithm': "aesgcm",
+                            'dh_group': "5",
+                            'life_time': 1800
+                    }
+        new_ipsec_policy = self._ipsec_policy_update(ipsec_policy['id'], new_expected)
+        self.assertEqual(ipsec_policy['id'], new_ipsec_policy['id'])
+        self.assertEqual(
+            dict((k, v) for k, v in new_ipsec_policy.items() if k in new_expected),
+            new_expected
+        )
+        return new_ipsec_policy
+
+    def test_list_ipsec_policys(self):
+        LOG.info("test to list ipsec_policys");
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        ipsec_policy = self._ipsec_policy_create(name=expected['name'], 
+                       description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        for k in ('id','encryption_algorithm','authentication_algorithm',
+                    'dh_group','life_time'):
+            self.assertTrue(ipsec_policy.get(k, None))
+        self.assertEqual(
+            dict((k, v) for k, v in ipsec_policy.items() if k in expected),
+            expected
+        )
+        res = self._get_resources('ipsec_policy')
+        print(json.dumps(res, indent=4))
+        return res
+
+
+    def test_delete_ipsec_policy(self):
+        LOG.info("test to delete ipsec_policy");
+        expected = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        ipsec_policy = self._ipsec_policy_create(name=expected['name'], 
+                       description=expected['description'],
+                       encryption_algorithm=expected['encryption_algorithm'],
+                       authentication_algorithm=expected['authentication_algorithm'],
+                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        ipsec_policy = self._ipsec_policy_delete(id=ipsec_policy['id'])
+        return
+
+
+    def test_get_ipsec_policys(self):
+        LOG.info("test to get ipsec_policys");
+        ipsec_policy1 = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 3600}
+        ipsec_policy1_get = self._ipsec_policy_create(name=ipsec_policy1['name'], 
+                       description=ipsec_policy1['description'],
+                       encryption_algorithm=ipsec_policy1['encryption_algorithm'],
+                       authentication_algorithm=ipsec_policy1['authentication_algorithm'],
+                       dh_group=ipsec_policy1['dh_group'], life_time=ipsec_policy1['life_time'])
+        ipsec_policy2 = {
+            'name': '',
+            'description': '',
+            'encryption_algorithm': 'aes256',
+            'authentication_algorithm': 'sha1', 
+            'dh_group': '2',
+            'life_time': 1800}
+        ipsec_policy2_get = self._ipsec_policy_create(name=ipsec_policy2['name'], 
+                       description=ipsec_policy2['description'],
+                       encryption_algorithm=ipsec_policy2['encryption_algorithm'],
+                       authentication_algorithm=ipsec_policy2['authentication_algorithm'],
+                       dh_group=ipsec_policy2['dh_group'], life_time=ipsec_policy2['life_time'])
+        ipsec_policys = self._get_resources('ipsec_policy')
+        self.assertEqual(len(ipsec_policys), 2)
+        self.assertEqual(ipsec_policys[0]['name'], ipsec_policy1_get['name'])
+        self.assertEqual(ipsec_policys[1]['name'], ipsec_policy2_get['name'])
+        self.assertEqual(ipsec_policys[0]['description'], ipsec_policy1_get['description'])
+        self.assertEqual(ipsec_policys[1]['description'], ipsec_policy2_get['description'])
+        r1 = self._get_resource('ipsec_policy', ipsec_policy1_get['id'])
+        r2 = self._get_resource('ipsec_policy', ipsec_policy2_get['id'])
+        self.assertEqual(r1['id'], ipsec_policy1_get['id'])
+        self.assertEqual(r2['id'], ipsec_policy2_get['id'])
