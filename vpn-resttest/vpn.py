@@ -56,6 +56,82 @@ def getSites():
 def deleteSite(id):
     return lib.doRequest(vpnService + '/sites/{}'.format(id), 'DELETE')
 
+#######################################################################################################
+## IPSec Policy
+
+
+def createIPSecPolicy(tenant_id, name='ipsec_policy1',
+         encryption_algorithm='aes256', authentication_algorithm='sha1',
+         dh_group='2', life_time=3600,description=None):
+    request = {
+                'ipsec_policy': {
+                              'tenant_id': tenant_id,
+                              'name': name,
+                              'encryption_algorithm': encryption_algorithm,
+                              'authentication_algorithm': authentication_algorithm,
+                              'dh_group': dh_group,
+                              'description': description,
+                              'life_time': life_time}
+                }
+    return lib.doRequest(vpnService + '/ipsec_policys', 'POST', request)['ipsec_policy']
+
+
+def updateIPSecPolicy(id, ipsec_policy):
+    return lib.doRequest(vpnService + '/ipsec_policys/{}'.format(id), 'PUT', ipsec_policy)['ipsec_policy']
+
+
+def getIPSecPolicy(id):
+    return lib.doRequest(vpnService + '/ipsec_policys/{}'.format(id), 'GET')['ipsec_policy']
+
+
+def getIPSecPolicys():
+    return lib.doRequest(vpnService + '/ipsec_policys', 'GET')['ipsec_policys']
+
+
+def deleteIPSecPolicy(id):
+    return lib.doRequest(vpnService + '/ipsec_policys/{}'.format(id), 'DELETE')
+
+
+#######################################################################################################
+## Isakmp Policy
+
+
+def createIsakmpPolicy(tenant_id, name='isakmp_policy1',
+         authentication_mode='psk', enable_pfs=True,
+         encryption_algorithm='aes256', authentication_algorithm='sha1',
+         dh_group='2', life_time=28000,description=None):
+    request = {
+                'isakmp_policy': {
+                              'tenant_id': tenant_id,
+                              'name': name,
+                              'authentication_mode': authentication_mode,
+                              'enable_pfs': enable_pfs,
+                              'encryption_algorithm': encryption_algorithm,
+                              'authentication_algorithm': authentication_algorithm,
+                              'dh_group': dh_group,
+                              'description': description,
+                              'life_time': life_time}
+                }
+    return lib.doRequest(vpnService + '/isakmp_policys', 'POST', request)['isakmp_policy']
+
+
+def updateIsakmpPolicy(id, isakmp_policy):
+    return lib.doRequest(vpnService + 
+                        '/isakmp_policys/{}'.format(id), 'PUT', isakmp_policy)['isakmp_policy']
+
+
+def getIsakmpPolicy(id):
+    return lib.doRequest(vpnService + '/isakmp_policys/{}'.format(id), 'GET')['isakmp_policy']
+
+
+def getIsakmpPolicys():
+    return lib.doRequest(vpnService + '/isakmp_policys', 'GET')['isakmp_policys']
+
+
+def deleteIsakmpPolicy(id):
+    return lib.doRequest(vpnService + '/isakmp_policys/{}'.format(id), 'DELETE')
+
+############################################################################################
 # Start of the scripts
 
 #test networks creation operation
@@ -156,3 +232,95 @@ os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" +
 print '\n\nDELETE EDGE CONFIG:'
 os.system("./restjson4.sh " + "GET " + edgeUri + " " + "/" + 
             edgeId + "/ipsec/config")
+
+
+#############################################################################
+## Start IPSec Policy test
+
+#clean the ipsec_policys first (also test get_ipsec_policy and delete_ipsec_policy)
+ipsec_policys = getIPSecPolicys()
+if len(ipsec_policys) >= 1:
+    for ipsec_policy in ipsec_policys:
+        deleteIPSecPolicy(ipsec_policy['id'])
+
+#test create_ipsec_policy
+ipsec_policy = createIPSecPolicy(
+				  tenant_id = tenantId,
+                  name = 'ipsec_policy1',
+                  description = '',
+                  encryption_algorithm = 'aes256',
+                  authentication_algorithm = 'sha1', 
+                  dh_group = '2',
+                  life_time = 3600,
+                        )
+#test get_ipsec_policy
+print '\n\nCREATE IPSec Policy STATS:'
+print ipsec_policy
+print json.dumps(ipsec_policy, indent=4)
+
+
+#test update_ipsec_policy
+update_ipsec_policy = {
+    "ipsec_policy" : {
+           "name": "new_ipsec_policy",
+           "description": "this is the updated ipsec_policy",
+           "dh_group":  '5',
+          }
+    }
+new_ipsec_policy = updateIPSecPolicy(ipsec_policy['id'], update_ipsec_policy)
+print '\n\nUPDATED IPSec Policy:'
+print json.dumps(new_ipsec_policy, indent=4)
+
+
+#test delete_ipsec_policy
+deleteIPSecPolicy(new_ipsec_policy['id'])
+ipsec_policys = getIPSecPolicys()
+if len(ipsec_policys) >= 1:
+	print 'failed to delete the ipsec_policy'
+	print json.dumps(ipsec_policys,indent=4)
+
+######################################################################################
+## Start Isakmp Policy
+
+
+#clean the isakmp_policys first (also test get_isakmp_policy and delete_isakmp_policy)
+isakmp_policys = getIsakmpPolicys()
+if len(isakmp_policys) >= 1:
+    for isakmp_policy in isakmp_policys:
+        deleteIPSecPolicy(isakmp_policy['id'])
+
+#test create_isakmp_policy
+isakmp_policy = createIsakmpPolicy(
+				  tenant_id = tenantId,
+                  name = 'isakmp_policy1',
+                  description = '',
+                  encryption_algorithm = 'aes256',
+                  authentication_algorithm = 'sha1', 
+                  dh_group = '2',
+                  life_time = 3600,
+                        )
+#test get_isakmp_policy
+print '\n\nCREATE Isakmp Policy STATS:'
+print isakmp_policy
+print json.dumps(isakmp_policy, indent=4)
+
+
+#test update_isakmp_policy
+update_isakmp_policy = {
+    "isakmp_policy" : {
+           "name": "new_isakmp_policy",
+           "description": "this is the updated isakmp_policy",
+           "dh_group":  '5',
+          }
+    }
+new_isakmp_policy = updateIsakmpPolicy(isakmp_policy['id'], update_isakmp_policy)
+print '\n\nUPDATED Isakmp Policy:'
+print json.dumps(new_isakmp_policy, indent=4)
+
+
+#test delete_isakmp_policy
+deleteIsakmpPolicy(new_isakmp_policy['id'])
+isakmp_policys = getIsakmpPolicys()
+if len(isakmp_policys) >= 1:
+	print 'failed to delete the isakmp_policy'
+	print json.dumps(isakmp_policys,indent=4)

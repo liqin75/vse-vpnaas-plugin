@@ -44,34 +44,34 @@ class Site(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     """Represents a v2 quantum VPN site."""
     name = sa.Column(sa.String(255))
     description = sa.Column(sa.String(255))
-    local_endpoint = sa.Column(sa.String(64), nullable=False);
-    peer_endpoint = sa.Column(sa.String(64), nullable=False);
-    local_id = sa.Column(sa.String(128), nullable=False);
-    peer_id = sa.Column(sa.String(128), nullable=False);
-    psk = sa.Column(sa.String(64), nullable=True);
-    mtu = sa.Column(sa.Integer, nullable=True);
-    pri_networks = sa.Column(sa.String(2048), nullable=False);
-    subnet_id = sa.Column(sa.String(64), nullable=True);
+    local_endpoint = sa.Column(sa.String(64), nullable=False)
+    peer_endpoint = sa.Column(sa.String(64), nullable=False)
+    local_id = sa.Column(sa.String(128), nullable=False)
+    peer_id = sa.Column(sa.String(128), nullable=False)
+    psk = sa.Column(sa.String(64), nullable=True)
+    mtu = sa.Column(sa.Integer, nullable=True)
+    pri_networks = sa.Column(sa.String(2048), nullable=False)
+    subnet_id = sa.Column(sa.String(64), nullable=True)
 
 class IPSecPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     """Represents a v2 quantum VPN Ipsec Policy."""
     name = sa.Column(sa.String(32))
-    description = sa.Column(sa.String(255))
-    encryption_algorithm = sa.Column(sa.String(16), nullable=True);
-    authentication_algorithm = sa.Column(sa.String(8), nullable=True);
-    dh_group = sa.Column(sa.String(1), nullable=True);
-    life_time = sa.Column(sa.Integer, nullable=True);
+    description = sa.Column(sa.String(255), nullable=True)
+    encryption_algorithm = sa.Column(sa.String(16), nullable=True)
+    authentication_algorithm = sa.Column(sa.String(8), nullable=True)
+    dh_group = sa.Column(sa.String(2), nullable=True)
+    life_time = sa.Column(sa.Integer, nullable=True)
 
 class IsakmpPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     """Represents a v2 quantum VPN Isakmp Policy."""
     name = sa.Column(sa.String(32))
     description = sa.Column(sa.String(255))
-    authentication_mode = sa.Column(sa.String(16), nullable=True);
-    encryption_algorithm = sa.Column(sa.String(16), nullable=True);
-    authentication_algorithm = sa.Column(sa.String(8), nullable=True);
-    enable_pfs = sa.Column(sa.Boolean, nullable = True);
-    dh_group = sa.Column(sa.String(1), nullable=True);
-    life_time = sa.Column(sa.Integer, nullable=True);
+    authentication_mode = sa.Column(sa.String(16), nullable=True)
+    encryption_algorithm = sa.Column(sa.String(16), nullable=True)
+    authentication_algorithm = sa.Column(sa.String(8), nullable=True)
+    enable_pfs = sa.Column(sa.Boolean, nullable = True)
+    dh_group = sa.Column(sa.String(1), nullable=True)
+    life_time = sa.Column(sa.Integer, nullable=True)
 
 class VPNPluginDb(VPNPluginBase):
     """
@@ -155,11 +155,11 @@ class VPNPluginDb(VPNPluginBase):
             r = self._get_by_id(context, model, id)
         except exc.NoResultFound:
             if issubclass(model, Site):
-                raise VPN.SiteNotFound(site_id=id)
+                raise vpn.SiteNotFound(site_id=id)
             elif issubclass(model, IPSecPolicy):
-                raise VPN.IPSecPolicyNotFound(ipsec_policy_id=id)
+                raise vpn.IPSecPolicyNotFound(ipsec_policy_id=id)
             elif issubclass(model, IsakmpPolicy):
-                raise VPN.IsakmpPolicyNotFound(isakmp_policy_id=id)
+                raise vpn.IsakmpPolicyNotFound(isakmp_policy_id=id)
             else:
                 raise
         return r
@@ -168,7 +168,7 @@ class VPNPluginDb(VPNPluginBase):
         status = getattr(obj, 'status', None)
 
         if status == constants.PENDING_DELETE:
-            raise VPN.StateInvalid(id=id, state=status)
+            raise vpn.StateInvalid(id=id, state=status)
 
     ########################################################
     # Site DB access
@@ -407,8 +407,6 @@ class VPNPluginDb(VPNPluginBase):
             self.assert_modification_allowed(isakmpp_db)
             if s:
                 try:
-                    print "isakmpp_db.update(s)"
-                    print isakmpp_db
                     isakmpp_db.update(s)
                     # To be add validation here
                     LOG.debug(_("update_isakmp_policy: %s") % id)
