@@ -62,7 +62,8 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
 
     def create_site(self, context, site):
         with context.session.begin(subtransactions=True):
-            s = super(VShieldEdgeVPNPlugin, self).create_site(context, site)
+            s = super(VShieldEdgeVPNPlugin,
+                      self).create_site(context, site)
             self.update_status(context, vpn_db.Site, s['id'],
                                constants.PENDING_CREATE)
             LOG.debug(_("Create site: %s") % s['id'])
@@ -83,10 +84,12 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
     def update_site(self, context, id, site):
         with context.session.begin(subtransactions=True):
 #            s_query = self.get_site(context, id, fields=["status"])
-#            if s_query['status'] in [constants.PENDING_DELETE, constants.ERROR]:
+#            if s_query['status'] in [constants.PENDING_DELETE,
+#                                     constants.ERROR]:
 #                raise vpn.StateInvalid(id=id, state=s_query['status'])
 
-            s = super(VShieldEdgeVPNPlugin, self).update_site(context, id, site)
+            s = super(VShieldEdgeVPNPlugin,
+                      self).update_site(context, id, site)
             self.update_status(context, vpn_db.Site, id,
                                constants.PENDING_UPDATE)
             LOG.debug(_("Update site: %s"), id)
@@ -131,14 +134,15 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
         return res
 
     def get_isakmp_policy(self, context, id, fields=None):
-        res = super(VShieldEdgeVPNPlugin, self).get_isakmp_policy(context, id, fields)
+        res = super(VShieldEdgeVPNPlugin,
+                    self).get_isakmp_policy(context, id, fields)
         LOG.debug(_("Get isakmp policy: %s"), id)
         return res
 
     def create_isakmp_policy(self, context, isakmp_policy):
         with context.session.begin(subtransactions=True):
-            s = super(VShieldEdgeVPNPlugin, self).create_isakmp_policy(context, 
-                                                            isakmp_policy)
+            s = super(VShieldEdgeVPNPlugin,
+                      self).create_isakmp_policy(context, isakmp_policy)
             self.update_status(context, vpn_db.IsakmpPolicy, s['id'],
                                constants.PENDING_CREATE)
             LOG.debug(_("Create isakmp policy: %s") % s['id'])
@@ -147,8 +151,8 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
 
     def update_isakmp_policy(self, context, id, isakmp_policy):
         with context.session.begin(subtransactions=True):
-            s = super(VShieldEdgeVPNPlugin, self).update_isakmp_policy(context, 
-                                                                id, isakmp_policy)
+            s = super(VShieldEdgeVPNPlugin,
+                      self).update_isakmp_policy(context, id, isakmp_policy)
             self.update_status(context, vpn_db.IsakmpPolicy, id,
                                constants.PENDING_UPDATE)
             LOG.debug(_("Update isakmp policy: %s"), id)
@@ -162,20 +166,23 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
             self.update_status(context, vpn_db.IsakmpPolicy, id,
                                constants.PENDING_DELETE)
             LOG.debug(_("Delete isakmp policy: %s"), id)
-            super(VShieldEdgeVPNPlugin, self).delete_isakmp_policy(context, id)
+            super(VShieldEdgeVPNPlugin,
+                  self).delete_isakmp_policy(context, id)
 
     def create_ipsec_policy(self, context, ipsec_policy):
         with context.session.begin(subtransactions=True):
-            s = super(VShieldEdgeVPNPlugin, self).create_ipsec_policy(context, ipsec_policy)
-            self.update_status(context, vpn_db.IPSecPolicy, s['id'],
+            p = super(VShieldEdgeVPNPlugin,
+                      self).create_ipsec_policy(context, ipsec_policy)
+            self.update_status(context, vpn_db.IPSecPolicy, p['id'],
                                constants.PENDING_CREATE)
-            LOG.debug(_("Create ipsec policy: %s") % s['id'])
-        s_query = self.get_ipsec_policy(context, s['id'])
+            LOG.debug(_("Create ipsec policy: %s") % p['id'])
+        s_query = self.get_ipsec_policy(context, p['id'])
         return s_query
 
     def update_ipsec_policy(self, context, id, ipsec_policy):
         with context.session.begin(subtransactions=True):
-            s = super(VShieldEdgeVPNPlugin, self).update_ipsec_policy(context, id, ipsec_policy)
+            p = super(VShieldEdgeVPNPlugin,
+                      self).update_ipsec_policy(context, id, ipsec_policy)
             self.update_status(context, vpn_db.IPSecPolicy, id,
                                constants.PENDING_UPDATE)
             LOG.debug(_("Update ipsec policy: %s"), id)
@@ -189,10 +196,12 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
             self.update_status(context, vpn_db.IPSecPolicy, id,
                                constants.PENDING_DELETE)
             LOG.debug(_("Delete ipsec policy: %s"), id)
-            super(VShieldEdgeVPNPlugin, self).delete_ipsec_policy(context, id)
+            super(VShieldEdgeVPNPlugin,
+                  self).delete_ipsec_policy(context, id)
 
     def get_ipsec_policy(self, context, id, fields=None):
-        res = super(VShieldEdgeVPNPlugin, self).get_ipsec_policy(context, id, fields)
+        res = super(VShieldEdgeVPNPlugin,
+                    self).get_ipsec_policy(context, id, fields)
         LOG.debug(_("Get ipsec policy: %s"), id)
         return res
 

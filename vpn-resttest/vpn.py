@@ -61,14 +61,14 @@ def deleteSite(id):
 
 
 def createIPSecPolicy(tenant_id, name='ipsec_policy1',
-         encryption_algorithm='aes256', authentication_algorithm='sha1',
+         enc_alg='aes256', auth_alg='sha1',
          dh_group='2', life_time=3600,description=None):
     request = {
                 'ipsec_policy': {
                               'tenant_id': tenant_id,
                               'name': name,
-                              'encryption_algorithm': encryption_algorithm,
-                              'authentication_algorithm': authentication_algorithm,
+                              'enc_alg': enc_alg,
+                              'auth_alg': auth_alg,
                               'dh_group': dh_group,
                               'description': description,
                               'life_time': life_time}
@@ -97,17 +97,17 @@ def deleteIPSecPolicy(id):
 
 
 def createIsakmpPolicy(tenant_id, name='isakmp_policy1',
-         authentication_mode='psk', enable_pfs=True,
-         encryption_algorithm='aes256', authentication_algorithm='sha1',
+         auth_mode='psk', enable_pfs=True,
+         enc_alg='aes256', auth_alg='sha1',
          dh_group='2', life_time=28000,description=None):
     request = {
                 'isakmp_policy': {
                               'tenant_id': tenant_id,
                               'name': name,
-                              'authentication_mode': authentication_mode,
+                              'auth_mode': auth_mode,
                               'enable_pfs': enable_pfs,
-                              'encryption_algorithm': encryption_algorithm,
-                              'authentication_algorithm': authentication_algorithm,
+                              'enc_alg': enc_alg,
+                              'auth_alg': auth_alg,
                               'dh_group': dh_group,
                               'description': description,
                               'life_time': life_time}
@@ -248,8 +248,8 @@ ipsec_policy = createIPSecPolicy(
 				  tenant_id = tenantId,
                   name = 'ipsec_policy1',
                   description = '',
-                  encryption_algorithm = 'aes256',
-                  authentication_algorithm = 'sha1', 
+                  enc_alg = 'aes256',
+                  auth_alg = 'sha1', 
                   dh_group = '2',
                   life_time = 3600,
                         )
@@ -294,8 +294,8 @@ isakmp_policy = createIsakmpPolicy(
 				  tenant_id = tenantId,
                   name = 'isakmp_policy1',
                   description = '',
-                  encryption_algorithm = 'aes256',
-                  authentication_algorithm = 'sha1', 
+                  enc_alg = 'aes256',
+                  auth_alg = 'sha1', 
                   dh_group = '2',
                   life_time = 3600,
                         )

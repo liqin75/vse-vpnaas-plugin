@@ -83,32 +83,29 @@ class VPNAPI():
             'authenticationMode': 'psk',
         }
         for pair in site['pri_networks']:
-           s['localSubnets']['subnets'] = pair['local_subnets'].split(",")
-           s['peerSubnets']['subnets'] = pair['peer_subnets'].split(",")
+            s['localSubnets']['subnets'] = pair['local_subnets'].split(",")
+            s['peerSubnets']['subnets'] = pair['peer_subnets'].split(",")
         return s
-
 
     def vpnaas2vsmIPSec(self, context, site):
         conf = {
-             'enabled': 'true',
-             'logging':{
+            'enabled': 'true',
+            'logging': {
                 'enable': 'true',
                 'logLevel': 'info'
-             },
-             'global':{
+            },
+            'global': {
                 'psk': None,
                 'serviceCertificate': None
-             },   
-             'sites': {
+            },
+            'sites': {
                 'sites': [site]
-             }
+            }
         }
         return conf
 
-
     def get_site_vseid(self, context, uuid):
         return uuid2vseid(context, uuid, SiteUuid2Vseid)
-
 
     def create_site(self, context, site):
         uri = self.uriprefix + '/config'

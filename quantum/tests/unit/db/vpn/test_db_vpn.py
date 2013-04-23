@@ -109,7 +109,7 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
     def site(self, fmt=None, name='site1', subnet=None,
              local_endpoint='10.117.35.202', peer_endpoint='10.117.35.203',
              local_id='10.117.35.202', peer_id='10.117.35.203',
-             pri_networks=[{'local_subnets':'192.168.1.0/24',
+             pri_networks=[{'local_subnets': '192.168.1.0/24',
                             'peer_subnets': '192.168.10.0/24'}],
              psk='123', mtu=1500, no_delete=False, **kwargs):
         if not fmt:
@@ -118,8 +118,9 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
         with test_db_plugin.optional_ctx(subnet, self.subnet) as tmp_subnet:
             res = self._create_site(fmt, name,
                                     local_endpoint, peer_endpoint,
-                                    local_id, peer_id, pri_networks, psk,mtu, 
-                                    subnet_id=tmp_subnet['subnet']['id'],
+                                    local_id, peer_id,
+                                    pri_networks, psk,
+                                    mtu, subnet_id=tmp_subnet['subnet']['id'],
                                     **kwargs)
             site = self.deserialize(fmt or self.fmt, res)
             if res.status_int >= 400:
@@ -130,20 +131,22 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
                 if not no_delete:
                     self._delete('sites', site['site']['id'])
 
-
-################################################################################
-#  Ipsec Policy 
-    def _create_ipsec_policy(self, fmt, name, encryption_algorithm, 
-                     authentication_algorithm, dh_group, life_time,
-                     expected_res_status=None, **kwargs):
-        data = {'ipsec_policy': 
-                                {'name': name,
-                                'tenant_id': self._tenant_id,
-                                'encryption_algorithm': encryption_algorithm,
-                                'authentication_algorithm': authentication_algorithm,
-                                'dh_group': dh_group,
-                                'life_time': life_time}
-                    }
+    # Ipsec Policy
+    def _create_ipsec_policy(self, fmt,
+                             name, enc_alg,
+                             auth_alg, dh_group,
+                             life_time, expected_res_status=None,
+                             **kwargs):
+        data = {
+            'ipsec_policy': {
+                'name': name,
+                'tenant_id': self._tenant_id,
+                'enc_alg': enc_alg,
+                'auth_alg': auth_alg,
+                'dh_group': dh_group,
+                'life_time': life_time
+            }
+        }
         for arg in ('description'):
             if arg in kwargs and kwargs[arg] is not None:
                 data['ipsec_policy'][arg] = kwargs[arg]
@@ -157,15 +160,16 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
 
     @contextlib.contextmanager
     def ipsec_policy(self, fmt=None, name='ipsec_policy1',
-             encryption_algorithm='aes256', authentication_algorithm='sha1',
-             dh_group='2', life_time=3600, no_delete=False, **kwargs):
+                     enc_alg='aes256', auth_alg='sha1',
+                     dh_group='2', life_time=3600,
+                     no_delete=False, **kwargs):
         if not fmt:
             fmt = self.fmt
 
         res = self._create_ipsec_policy(fmt, name,
-                                encryption_algorithm, authentication_algorithm,
-                                dh_group, life_time,
-                                **kwargs)
+                                        enc_alg, auth_alg,
+                                        dh_group, life_time,
+                                        **kwargs)
         ipsec_policy = self.deserialize(fmt or self.fmt, res)
         if res.status_int >= 400:
             raise webob.exc.HTTPClientError(code=res.status_int)
@@ -173,30 +177,34 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
             yield ipsec_policy
         finally:
             if not no_delete:
-                self._delete('ipsec_policys', ipsec_policy['ipsec_policy']['id'])
+                self._delete('ipsec_policys',
+                             ipsec_policy['ipsec_policy']['id'])
 
-
-################################################################################
-#  Ipsec Policy 
-    def _create_isakmp_policy(self, fmt, name,  
-                     authentication_mode, enable_pfs,
-                     encryption_algorithm, authentication_algorithm, 
-                     dh_group, life_time,
-                     expected_res_status=None, **kwargs):
-        data = {'isakmp_policy': 
-                                {'name': name,
-                                'tenant_id': self._tenant_id,
-                                'authentication_mode': authentication_mode,
-                                'enable_pfs': enable_pfs,
-                                'encryption_algorithm': encryption_algorithm,
-                                'authentication_algorithm': authentication_algorithm,
-                                'dh_group': dh_group,
-                                'life_time': life_time}
-                    }
+##############################################################################
+# Isakmp Policy
+    def _create_isakmp_policy(self, fmt, name,
+                              auth_mode, enable_pfs,
+                              enc_alg, auth_alg,
+                              dh_group, life_time,
+                              expected_res_status=None,
+                              **kwargs):
+        data = {
+            'isakmp_policy': {
+                'name': name,
+                'tenant_id': self._tenant_id,
+                'auth_mode': auth_mode,
+                'enable_pfs': enable_pfs,
+                'enc_alg': enc_alg,
+                'auth_alg': auth_alg,
+                'dh_group': dh_group,
+                'life_time': life_time
+            }
+        }
         for arg in ('description'):
             if arg in kwargs and kwargs[arg] is not None:
                 data['isakmp_policy'][arg] = kwargs[arg]
-        isakmp_policy_req = self.new_create_request('isakmp_policys', data, fmt)
+        isakmp_policy_req = self.new_create_request('isakmp_policys',
+                                                    data, fmt)
         isakmp_policy_res = isakmp_policy_req.get_response(self.ext_api)
         if expected_res_status:
             self.assertEqual(isakmp_policy_res.status_int, expected_res_status)
@@ -205,17 +213,18 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
 
     @contextlib.contextmanager
     def isakmp_policy(self, fmt=None, name='isakmp_policy1',
-             authentication_mode='psk', enable_pfs=True,
-             encryption_algorithm='aes256', authentication_algorithm='sha1',
-             dh_group='2', life_time=28800, no_delete=False, **kwargs):
+                      auth_mode='psk', enable_pfs=True,
+                      enc_alg='aes256', auth_alg='sha1',
+                      dh_group='2', life_time=28800,
+                      no_delete=False, **kwargs):
         if not fmt:
             fmt = self.fmt
 
         res = self._create_isakmp_policy(fmt, name,
-                                authentication_mode, enable_pfs,
-                                encryption_algorithm, authentication_algorithm,
-                                dh_group, life_time,
-                                **kwargs)
+                                         auth_mode, enable_pfs,
+                                         enc_alg, auth_alg,
+                                         dh_group, life_time,
+                                         **kwargs)
         isakmp_policy = self.deserialize(fmt or self.fmt, res)
         if res.status_int >= 400:
             raise webob.exc.HTTPClientError(code=res.status_int)
@@ -223,7 +232,8 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
             yield isakmp_policy
         finally:
             if not no_delete:
-                self._delete('isakmp_policys', isakmp_policy['isakmp_policy']['id'])
+                self._delete('isakmp_policys',
+                             isakmp_policy['isakmp_policy']['id'])
 
 
 ############################################################################
@@ -240,11 +250,11 @@ class TestVPN(VPNPluginDbTestCase):
             'psk': 'hello123',
             'mtu': 1500,
             'pri_networks': [{'local_subnets': "192.168.1.0/24,192.168.2.0/24",
-                              'peer_subnets': "192.168.10.0/24,192.168.20.0/24"},
+                    'peer_subnets': "192.168.10.0/24,192.168.20.0/24"},
                              {'local_subnets': "192.168.3.0/24,192.168.4.0/24",
-                              'peer_subnets': "192.168.30.0/24,192.168.40.0/24"}
-                            ],
-            'tenant_id': self._tenant_id}
+                    'peer_subnets': "192.168.30.0/24,192.168.40.0/24"}],
+            'tenant_id': self._tenant_id
+        }
 
         expected.update(extras)
         with self.subnet() as subnet:
@@ -258,7 +268,7 @@ class TestVPN(VPNPluginDbTestCase):
                     self.assertTrue(site['site'].get(k, None))
                 self.assertEqual(
                     dict((k, v)
-                        for k, v in site['site'].items() if k in expected),
+                         for k, v in site['site'].items() if k in expected),
                     expected
                 )
         return site
@@ -276,7 +286,7 @@ class TestVPN(VPNPluginDbTestCase):
             data = {'site': {'name': name,
                              'mtu': 1800,
                              'local_endpoint': "10.117.35.204",
-                             'peer_endpoint': "10.117.35.205",                            
+                             'peer_endpoint': "10.117.35.205",
                              'psk': "123"}}
             req = self.new_update_request('sites', data, site['site']['id'])
             res = self.deserialize(self.fmt, req.get_response(self.ext_api))
@@ -284,10 +294,10 @@ class TestVPN(VPNPluginDbTestCase):
                 self.assertEqual(res['site'][k], v)
 
     def test_delete_site(self):
-         with self.site(no_delete=True) as site:
-             req = self.new_delete_request('sites', site['site']['id'])
-             res = req.get_response(self.ext_api)
-             self.assertEqual(res.status_int, 204)
+        with self.site(no_delete=True) as site:
+            req = self.new_delete_request('sites', site['site']['id'])
+            res = req.get_response(self.ext_api)
+            self.assertEqual(res.status_int, 204)
 
     def test_show_site(self):
         name = "site_show"
@@ -295,8 +305,7 @@ class TestVPN(VPNPluginDbTestCase):
                 ('local_endpoint', "10.117.35.202"),
                 ('peer_endpoint', "10.117.35.203"),
                 ('local_id', "10.117.35.202"),
-                ('peer_id', "10.117.35.203"),
-               ]
+                ('peer_id', "10.117.35.203")]
         with self.site(name=name, local_endpoint='10.117.35.202') as site:
             req = self.new_show_request('sites',
                                         site['site']['id'])
@@ -319,67 +328,67 @@ class TestVPN(VPNPluginDbTestCase):
             for k, v in keys:
                 self.assertEqual(res['sites'][0][k], v)
 
-
     def test_create_ipsec_policy(self, **extras):
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
 
         expected.update(extras)
         name = expected['name']
         with self.ipsec_policy(name=name, description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], 
-                       life_time=expected['life_time'],
-                       **extras) as ipsec_policy:
+                               enc_alg=expected['enc_alg'],
+                               auth_alg=expected['auth_alg'],
+                               dh_group=expected['dh_group'],
+                               life_time=expected['life_time'],
+                               **extras) as ipsec_policy:
             self.assertEqual(
                 dict((k, v)
-                    for k, v in ipsec_policy['ipsec_policy'].items()
-                    if k in expected),
+                     for k, v in ipsec_policy['ipsec_policy'].items()
+                     if k in expected),
                 expected
             )
         return ipsec_policy
 
-
     def test_update_ipsec_policy(self):
         name = 'new_ipsec_policy'
         keys = [('name', name),
-                ('encryption_algorithm', "aesgcm"),
-                 ('dh_group', "5"),
+                ('enc_alg', "aesgcm"),
+                ('dh_group', "5"),
                 ('life_time', 1800)]
 
         with self.ipsec_policy(name=name) as ipsec_policy:
-            data = {'ipsec_policy':
-                                {'name': name,
-                                 'encryption_algorithm': "aesgcm",
-                                 'dh_group': "5",
-                                 'life_time': 1800}
-                        }
+            data = {
+                'ipsec_policy': {
+                    'name': name,
+                    'enc_alg': "aesgcm",
+                    'dh_group': "5",
+                    'life_time': 1800
+                }
+            }
             req = self.new_update_request('ipsec_policys', data,
-                                        ipsec_policy['ipsec_policy']['id'])
+                                          ipsec_policy['ipsec_policy']['id'])
             res = self.deserialize(self.fmt, req.get_response(self.ext_api))
             for k, v in keys:
                 self.assertEqual(res['ipsec_policy'][k], v)
 
     def test_delete_ipsec_policy(self):
         with self.ipsec_policy(no_delete=True) as ipsec_policy:
-            req = self.new_delete_request('ipsec_policys', 
-                                        ipsec_policy['ipsec_policy']['id'])
+            req = self.new_delete_request('ipsec_policys',
+                                          ipsec_policy['ipsec_policy']['id'])
             res = req.get_response(self.ext_api)
             self.assertEqual(res.status_int, 204)
 
     def test_show_ipsec_policy(self):
         name = "ipsec_policy_show"
         keys = [('name', name),
-                ('encryption_algorithm', "aes256")]
+                ('enc_alg', "aes256")]
         with self.ipsec_policy(name=name) as ipsec_policy:
             req = self.new_show_request('ipsec_policys',
-                                    ipsec_policy['ipsec_policy']['id'])
+                                        ipsec_policy['ipsec_policy']['id'])
             res = self.deserialize(self.fmt, req.get_response(self.ext_api))
             for k, v in keys:
                 self.assertEqual(res['ipsec_policy'][k], v)
@@ -387,7 +396,7 @@ class TestVPN(VPNPluginDbTestCase):
     def test_list_ipsec_policys(self):
         name = "ipsec_policys_list"
         keys = [('name', name),
-                ('encryption_algorithm', "aes256")]
+                ('enc_alg', "aes256")]
         with self.ipsec_policy(name=name) as ipsec_policy:
             keys.append(('id', ipsec_policy['ipsec_policy']['id']))
             req = self.new_list_request('ipsec_policys')
@@ -396,77 +405,79 @@ class TestVPN(VPNPluginDbTestCase):
             for k, v in keys:
                 self.assertEqual(res['ipsec_policys'][0][k], v)
 
+###############################################################################
+# Isakmp Policy Test cases
 
-##########################################################################################
-## Isakmp Policy Test cases
     def test_create_isakmp_policy(self, **extras):
         expected = {
             'name': '',
             'description': '',
-            'authentication_mode': 'psk',
+            'auth_mode': 'psk',
             'enable_pfs': True,
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
-            'life_time': 26000}
+            'life_time': 26000
+        }
 
         expected.update(extras)
         name = expected['name']
         with self.isakmp_policy(name=name, description=expected['description'],
-                       authentication_mode=expected['authentication_mode'],
-                       enable_pfs=expected['enable_pfs'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], 
-                       life_time=expected['life_time'],
-                       **extras) as isakmp_policy:
+                                auth_mode=expected['auth_mode'],
+                                enable_pfs=expected['enable_pfs'],
+                                enc_alg=expected['enc_alg'],
+                                auth_alg=expected['auth_alg'],
+                                dh_group=expected['dh_group'],
+                                life_time=expected['life_time'],
+                                **extras) as isakmp_policy:
             self.assertEqual(
                 dict((k, v)
-                    for k, v in isakmp_policy['isakmp_policy'].items()
-                    if k in expected),
+                     for k, v in isakmp_policy['isakmp_policy'].items()
+                     if k in expected),
                 expected
             )
         return isakmp_policy
 
-
     def test_update_isakmp_policy(self):
         name = 'new_isakmp_policy'
         keys = [('name', name),
-                ('authentication_mode', "x.509"),
+                ('auth_mode', "x.509"),
                 ('enable_pfs', False),
-                ('encryption_algorithm', "aesgcm"),
+                ('enc_alg', "aesgcm"),
                 ('dh_group', "5"),
                 ('life_time', 18000)]
 
         with self.isakmp_policy(name=name) as isakmp_policy:
-            data = {'isakmp_policy':
-                                {'name': name,
-                                 'authentication_mode': "x.509",
-                                 'enable_pfs': False,
-                                 'encryption_algorithm': "aesgcm",
-                                 'dh_group': "5",
-                                 'life_time': 18000}
-                        }
+            data = {
+                'isakmp_policy': {
+                    'name': name,
+                    'auth_mode': "x.509",
+                    'enable_pfs': False,
+                    'enc_alg': "aesgcm",
+                    'dh_group': "5",
+                    'life_time': 18000
+                }
+            }
             req = self.new_update_request('isakmp_policys', data,
-                                        isakmp_policy['isakmp_policy']['id'])
+                                          isakmp_policy['isakmp_policy']['id'])
             res = self.deserialize(self.fmt, req.get_response(self.ext_api))
             for k, v in keys:
                 self.assertEqual(res['isakmp_policy'][k], v)
 
     def test_delete_isakmp_policy(self):
         with self.isakmp_policy(no_delete=True) as isakmp_policy:
-            req = self.new_delete_request('isakmp_policys', 
-                                        isakmp_policy['isakmp_policy']['id'])
+            req = self.new_delete_request('isakmp_policys',
+                                          isakmp_policy['isakmp_policy']['id'])
             res = req.get_response(self.ext_api)
             self.assertEqual(res.status_int, 204)
 
     def test_show_isakmp_policy(self):
         name = "isakmp_policy_show"
         keys = [('name', name),
-                ('encryption_algorithm', "aes256")]
+                ('enc_alg', "aes256")]
         with self.isakmp_policy(name=name) as isakmp_policy:
             req = self.new_show_request('isakmp_policys',
-                                    isakmp_policy['isakmp_policy']['id'])
+                                        isakmp_policy['isakmp_policy']['id'])
             res = self.deserialize(self.fmt, req.get_response(self.ext_api))
             for k, v in keys:
                 self.assertEqual(res['isakmp_policy'][k], v)
@@ -474,7 +485,7 @@ class TestVPN(VPNPluginDbTestCase):
     def test_list_isakmp_policys(self):
         name = "isakmp_policys_list"
         keys = [('name', name),
-                ('encryption_algorithm', "aes256")]
+                ('enc_alg', "aes256")]
         with self.isakmp_policy(name=name) as isakmp_policy:
             keys.append(('id', isakmp_policy['isakmp_policy']['id']))
             req = self.new_list_request('isakmp_policys')
@@ -482,4 +493,3 @@ class TestVPN(VPNPluginDbTestCase):
             self.assertEqual(len(res), 1)
             for k, v in keys:
                 self.assertEqual(res['isakmp_policys'][0][k], v)
-

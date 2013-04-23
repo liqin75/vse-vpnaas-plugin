@@ -27,28 +27,31 @@ from quantum import manager
 from quantum.plugins.common import constants
 from quantum.plugins.services.service_base import ServicePluginBase
 
+
 # VPN Exceptions
 class SiteNotFound(qexception.NotFound):
     message = _("Site %(site_id)s could not be found")
 
 
 class SiteExists(qexception.QuantumException):
-    message = _("Another Site already exists for local_endpoint") 
-    message+= _(" %(local_endpoint)s and peer_endpoint %(peer_endpoint)s")
+    message = _("Another Site already exists for local_endpoint")
+    message += _(" %(local_endpoint)s and peer_endpoint %(peer_endpoint)s")
 
 
 class IsakmpPolicyNotFound(qexception.NotFound):
     message = _("ISAKMP policy %(isakmp_policy_id)s could not be found")
 
+
 class IsakmpPolicyExists(qexception.QuantumException):
-    message = _("Another Isakmp Policy already exists") 
+    message = _("Another Isakmp Policy already exists")
+
 
 class IPSecPolicyNotFound(qexception.NotFound):
     message = _("IPSec policy %(ipsec_policy_id)s could not be found")
 
 
 class IPSecPolicyExists(qexception.QuantumException):
-    message = _("Another Ipsec Policy already exists") 
+    message = _("Another Ipsec Policy already exists")
 
 
 class TrustProfileNotFound(qexception.NotFound):
@@ -79,26 +82,26 @@ RESOURCE_ATTRIBUTE_MAP = {
                       'validate': {'type:uuid': None},
                       'is_visible': True},
         'local_endpoint': {'allow_post': True, 'allow_put': True,
-                    'validate': {'type:ip_address': None},
-                    'is_visible': True},
-        'peer_endpoint':  {'allow_post': True, 'allow_put': True,
-                    'validate': {'type:ip_address': None},
-                    'is_visible': True},
+                           'validate': {'type:ip_address': None},
+                           'is_visible': True},
+        'peer_endpoint': {'allow_post': True, 'allow_put': True,
+                           'validate': {'type:ip_address': None},
+                           'is_visible': True},
         'local_id': {'allow_post': True, 'allow_put': True,
-                    'validate': {'type:string': None},
-                    'default': '',
-                    'is_visible': True},
-        'peer_id':  {'allow_post': True, 'allow_put': True,
-                    'validate': {'type:string': None},
-                    'default': '',
-                    'is_visible': True},
+                     'validate': {'type:string': None},
+                     'default': '',
+                     'is_visible': True},
+        'peer_id': {'allow_post': True, 'allow_put': True,
+                     'validate': {'type:string': None},
+                     'default': '',
+                     'is_visible': True},
         'pri_networks': {'allow_post': True, 'allow_put': True,
                          'is_visible': True},
         'isakmp_policy_id': {'allow_post': True, 'allow_put': True,
                              'validate': {'type:uuid': None},
                              'default': attr.ATTR_NOT_SPECIFIED,
                              'is_visible': True},
-        'ipsec_policy_id':  {'allow_post': True, 'allow_put': True,
+        'ipsec_policy_id': {'allow_post': True, 'allow_put': True,
                              'validate': {'type:uuid': None},
                              'default': attr.ATTR_NOT_SPECIFIED,
                              'is_visible': True},
@@ -146,24 +149,24 @@ RESOURCE_ATTRIBUTE_MAP = {
         'description': {'allow_post': True, 'allow_put': True,
                         'validate': {'type:string': None},
                         'is_visible': True, 'default': ''},
-        'authentication_mode': {'allow_post': True, 'allow_put': True,
-                                'validate': {'type:values': ['psk','x.509']},
-                                'default': 'psk',
-                                'is_visible': True},
-        'encryption_algorithm': {'allow_post': True, 'allow_put': True,
-                                 'validate': {
-                                    'type:values':
-                                       ['3des', 'aes128', 'aes256', 'aesgcm']},
-                                 'default': 'aes256',
-                                 'is_visible': True},
-        'authentication_algorithm': {'allow_post': True, 'allow_put': True,
-                                     'validate': {'type:values': ['sha1']},
-                                     'default': 'sha1',
-                                     'is_visible': True},
-        'enable_pfs': {'allow_post': True, 'allow_put': True,
-                      'default': True,
-                      'convert_to': attr.convert_to_boolean,
+        'auth_mode': {'allow_post': True, 'allow_put': True,
+                      'validate': {'type:values': ['psk', 'x.509']},
+                      'default': 'psk',
                       'is_visible': True},
+        'enc_alg': {'allow_post': True, 'allow_put': True,
+                    'validate': {
+                    'type:values':
+                        ['3des', 'aes128', 'aes256', 'aesgcm']},
+                    'default': 'aes256',
+                    'is_visible': True},
+        'auth_alg': {'allow_post': True, 'allow_put': True,
+                     'validate': {'type:values': ['sha1']},
+                     'default': 'sha1',
+                     'is_visible': True},
+        'enable_pfs': {'allow_post': True, 'allow_put': True,
+                       'default': True,
+                       'convert_to': attr.convert_to_boolean,
+                       'is_visible': True},
         'dh_group': {'allow_post': True, 'allow_put': True,
                      'validate': {'type:values': ['1', '2', '5']},
                      'default': '2',
@@ -190,16 +193,16 @@ RESOURCE_ATTRIBUTE_MAP = {
         'description': {'allow_post': True, 'allow_put': True,
                         'validate': {'type:string': None},
                         'is_visible': True, 'default': ''},
-        'encryption_algorithm': {'allow_post': True, 'allow_put': True,
-                                 'validate': {
-                                    'type:values':
-                                       ['3des', 'aes128', 'aes256', 'aesgcm']},
-                                 'default': 'aes256',
-                                 'is_visible': True},
-        'authentication_algorithm': {'allow_post': True, 'allow_put': True,
-                                     'validate': {'type:values': ['sha1']},
-                                     'default': 'sha1',
-                                     'is_visible': True},
+        'enc_alg': {'allow_post': True, 'allow_put': True,
+                    'validate': {
+                    'type:values':
+                        ['3des', 'aes128', 'aes256', 'aesgcm']},
+                    'default': 'aes256',
+                    'is_visible': True},
+        'auth_alg': {'allow_post': True, 'allow_put': True,
+                     'validate': {'type:values': ['sha1']},
+                     'default': 'sha1',
+                     'is_visible': True},
         'dh_group': {'allow_post': True, 'allow_put': True,
                      'validate': {'type:values': ['1', '2', '5']},
                      'default': '2',
@@ -237,10 +240,10 @@ RESOURCE_ATTRIBUTE_MAP = {
                 'is_visible': True, 'default': ''},
         'server_certificate': {'allow_post': True, 'allow_put': True,
                                'is_visible': True}
-
-   }
+    }
 
 }
+
 
 class Vpn(extensions.ExtensionDescriptor):
 

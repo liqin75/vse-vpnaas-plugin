@@ -40,9 +40,9 @@ extensions_path = ':'.join(quantum.extensions.__path__)
 
 LOG = logging.getLogger(__name__)
 
-class VPNTestPlugin(
-    vpnplugin.VShieldEdgeVPNPlugin,
-    db_base_plugin_v2.QuantumDbPluginV2):
+
+class VPNTestPlugin(vpnplugin.VShieldEdgeVPNPlugin,
+                    db_base_plugin_v2.QuantumDbPluginV2):
 
     supported_extension_aliases = ["vpnaas"]
     """
@@ -61,6 +61,7 @@ class VPNTestPlugin(
             context, id, fields)
         return r
     """
+
 
 class VPNTestCase(base.BaseTestCase):
     def setUp(self):
@@ -121,20 +122,22 @@ class VPNTestCase(base.BaseTestCase):
 
     def _get_resource(self, resource, id):
         collection = resource + 's'
-        res = self._do_request('GET', _get_path('vpn/' + collection + '/' + id))
+        res = self._do_request('GET',
+                               _get_path('vpn/' + collection + '/' + id))
         return res[resource]
 
     def _site_create(self, name="", description="",
-                     local_endpoint="10.117.35.202", local_id="10.117.35.202",
-                     peer_endpoint="10.117.35.203", peer_id="10.117.35.203",
-                     pri_networks = [
-                        {
-                           'local_subnets': "192.168.1.0/24,192.168.2.0/24",
-                           'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
-                        }],
-                      psk="123",
-                      mtu="1500",
-                      location=None):
+                     local_endpoint="10.117.35.202",
+                     local_id="10.117.35.202",
+                     peer_endpoint="10.117.35.203",
+                     peer_id="10.117.35.203",
+                     pri_networks=[
+                         {'local_subnets': "192.168.1.0/24, 192.168.2.0/24",
+                          'peer_subnets': "192.168.11.0/24, 192.168.22.0/24"}
+                     ],
+                     psk="123",
+                     mtu="1500",
+                     location=None):
         data = {
             "site": {
                 "tenant_id": self._tenant_id,
@@ -163,10 +166,9 @@ class VPNTestCase(base.BaseTestCase):
             return old_site['site']
         data = {
             "site": site
-            }
+        }
         new_site = self._do_request('PUT', _get_path(path), data)
         return new_site['site']
-
 
     def _site_delete(self, id):
         path = 'vpn/sites/{0}'.format(id)
@@ -178,9 +180,8 @@ class VPNTestCase(base.BaseTestCase):
         res = self._do_request('GET', _get_path(path), None)
         return res
 
-
     def test_create_site(self, **extras):
-        LOG.info("test to create site");
+        LOG.info("test to create site")
         expected = {
             'name': 'site1',
             'description': '',
@@ -191,11 +192,10 @@ class VPNTestCase(base.BaseTestCase):
             'psk': 'hello123',
             'mtu': 1500,
             'pri_networks': [
-               {
-                  'local_subnets': "192.168.1.0/24,192.168.2.0/24",
-                  'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
-               }]
-            }
+                {'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                 'peer_subnets': "192.168.11.0/24,192.168.22.0/24"}
+            ]
+        }
         expected.update(extras)
         site = self._site_create(name=expected['name'],
                                  description=expected['description'],
@@ -206,7 +206,8 @@ class VPNTestCase(base.BaseTestCase):
                                  pri_networks=expected['pri_networks'],
                                  psk=expected['psk'],
                                  mtu=expected['mtu'])
-        for k in ('id','local_endpoint','peer_endpoint','local_id','peer_id'):
+        for k in ('id', 'local_endpoint', 'peer_endpoint',
+                  'local_id', 'peer_id'):
             self.assertTrue(site.get(k, None))
         self.assertEqual(
             dict((k, v) for k, v in site.items() if k in expected),
@@ -216,18 +217,17 @@ class VPNTestCase(base.BaseTestCase):
         return site
 
     def test_update_site(self):
-        LOG.info("test to update site");
+        LOG.info("test to update site")
         expected = {
             'name': 'site1',
             'description': 'description for site1',
             'psk': '123',
             'mtu': 1800,
             'pri_networks': [
-               {
-                  'local_subnets': "192.168.1.0/24,192.168.2.0/24",
-                  'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
-               }]
-            }
+                {'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                 'peer_subnets': "192.168.11.0/24,192.168.22.0/24"}
+            ]
+        }
         site = self._site_create(name=expected['name'],
                                  description=expected['description'],
                                  pri_networks=expected['pri_networks'],
@@ -239,11 +239,10 @@ class VPNTestCase(base.BaseTestCase):
             'psk': '234',
             'mtu': 1800,
             'pri_networks': [
-               {
-                  'local_subnets': "192.168.1.0/24,192.168.2.0/24",
-                  'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
-               }]
-            }
+                {'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                 'peer_subnets': "192.168.11.0/24,192.168.22.0/24"}
+            ]
+        }
         new_site = self._site_update(site['id'], new_expected)
         self.assertEqual(site['id'], new_site['id'])
         self.assertEqual(
@@ -253,24 +252,24 @@ class VPNTestCase(base.BaseTestCase):
         return new_site
 
     def test_list_sites(self):
-        LOG.info("test to list sites");
+        LOG.info("test to list sites")
         expected = {
             'name': 'site3',
             'description': 'description for site3',
             'psk': '123',
             'mtu': 1800,
             'pri_networks': [
-               {
-                'local_subnets': "192.168.1.0/24",
-                'peer_subnets': "192.168.11.0/24"
-               }]
-            }
+                {'local_subnets': "192.168.1.0/24",
+                 'peer_subnets': "192.168.11.0/24"}
+            ]
+        }
         site = self._site_create(name=expected['name'],
                                  description=expected['description'],
                                  pri_networks=expected['pri_networks'],
                                  psk=expected['psk'],
                                  mtu=expected['mtu'])
-        for k in ('id','local_endpoint','peer_endpoint','local_id','peer_id'):
+        for k in ('id', 'local_endpoint', 'peer_endpoint',
+                  'local_id', 'peer_id'):
             self.assertTrue(site.get(k, None))
         self.assertEqual(
             dict((k, v) for k, v in site.items() if k in expected),
@@ -280,9 +279,8 @@ class VPNTestCase(base.BaseTestCase):
         print(json.dumps(res, indent=4))
         return res
 
-
     def test_delete_site(self):
-        LOG.info("test to delete site");
+        LOG.info("test to delete site")
         expected = {
             'name': 'site1',
             'description': 'description for site1',
@@ -291,11 +289,10 @@ class VPNTestCase(base.BaseTestCase):
             'local_id': "10.117.35.202",
             'peer_id': "10.117.35.203",
             'pri_networks': [
-               {
-                  'local_subnets': "192.168.1.0/24",
-                  'peer_subnets': "192.168.11.0/24"
-               }]
-            }
+                {'local_subnets': "192.168.1.0/24",
+                 'peer_subnets': "192.168.11.0/24"}
+            ]
+        }
         site = self._site_create(name=expected['name'],
                                  description=expected['description'],
                                  local_endpoint=expected['local_endpoint'],
@@ -307,31 +304,28 @@ class VPNTestCase(base.BaseTestCase):
         site = self._site_delete(id=site['id'])
         return
 
-
     def test_get_sites(self):
-        LOG.info("test to get sites");
+        LOG.info("test to get sites")
         site1 = self._site_create(name="site 1",
                                   description="description 1",
                                   local_endpoint="10.117.35.202",
                                   local_id="10.117.35.202",
                                   peer_endpoint="10.117.35.203",
                                   peer_id="10.117.35.203",
-                                  pri_networks=[{
-                                       'local_subnets': "192.168.1.0/24",
-                                       'peer_subnets': "192.168.11.0/24"
-                                    }]
-                                  )
-        site2 = self._site_create(name="site 2",
-                            description="description 2",
-                            local_endpoint="10.117.35.202",
-                            local_id="10.117.35.202",
-                            peer_endpoint="10.117.35.204",
-                            peer_id="10.117.35.204",
-                            pri_networks=[{
-                              'local_subnets': "192.168.1.0/24,192.168.2.0/24",
-                              'peer_subnets': "192.168.11.0/24,192.168.22.0/24"
-                              }]
-                            )
+                                  pri_networks=[
+                                      {'local_subnets': "192.168.1.0/24",
+                                       'peer_subnets': "192.168.11.0/24"}
+                                  ])
+        site2 = self._site_create(
+            name="site 2",
+            description="description 2",
+            local_endpoint="10.117.35.202",
+            local_id="10.117.35.202",
+            peer_endpoint="10.117.35.204",
+            peer_id="10.117.35.204",
+            pri_networks=[{
+                'local_subnets': "192.168.1.0/24,192.168.2.0/24",
+                'peer_subnets': "192.168.11.0/24,192.168.22.0/24"}])
         sites = self._get_resources('site')
         self.assertEqual(len(sites), 2)
         self.assertEqual(sites[0]['name'], site1['name'])
@@ -343,9 +337,8 @@ class VPNTestCase(base.BaseTestCase):
         self.assertEqual(r1['id'], site1['id'])
         self.assertEqual(r2['id'], site2['id'])
 
-
     def test_stats(self):
-        LOG.info("test to get stats of site");
+        LOG.info("test to get stats of site")
         expected = {
             'name': 'site1',
             'description': 'description for site1',
@@ -354,11 +347,10 @@ class VPNTestCase(base.BaseTestCase):
             'local_id': "10.117.35.202",
             'peer_id': "10.117.35.203",
             'pri_networks': [
-               {
-                  'local_subnets': "192.168.1.0/24",
-                  'peer_subnets': "192.168.11.0/24"
-               }]
-            }
+                {'local_subnets': "192.168.1.0/24",
+                 'peer_subnets': "192.168.11.0/24"}
+            ]
+        }
         site = self._site_create(name=expected['name'],
                                  description=expected['description'],
                                  local_endpoint=expected['local_endpoint'],
@@ -370,16 +362,16 @@ class VPNTestCase(base.BaseTestCase):
         res = self._stats(id=site['id'])
         return
 
-
     def _ipsec_policy_create(self, name='ipsec_policy1',
-             encryption_algorithm='aes256', authentication_algorithm='sha1',
-             dh_group='2', life_time=3600,description=None):
+                             enc_alg='aes256', auth_alg='sha1',
+                             dh_group='2', life_time=3600,
+                             description=None):
         data = {'ipsec_policy': {'name': name,
-                                  'tenant_id': self._tenant_id,
-                                  'encryption_algorithm': encryption_algorithm,
-                                  'authentication_algorithm': authentication_algorithm,
-                                  'dh_group': dh_group,
-                                  'life_time': life_time}}
+                                 'tenant_id': self._tenant_id,
+                                 'enc_alg': enc_alg,
+                                 'auth_alg': auth_alg,
+                                 'dh_group': dh_group,
+                                 'life_time': life_time}}
         if description:
             data['ipsec_policy']['description'] = description
         res = self._do_request('POST', _get_path('vpn/ipsec_policys'), data)
@@ -392,10 +384,9 @@ class VPNTestCase(base.BaseTestCase):
             return old_ipsec_policy['ipsec_policy']
         data = {
             "ipsec_policy": ipsec_policy
-            }
+        }
         new_ipsec_policy = self._do_request('PUT', _get_path(path), data)
         return new_ipsec_policy['ipsec_policy']
-
 
     def _ipsec_policy_delete(self, id):
         path = 'vpn/ipsec_policys/{0}'.format(id)
@@ -403,22 +394,25 @@ class VPNTestCase(base.BaseTestCase):
         return res
 
     def test_create_ipsec_policy(self, **extras):
-        LOG.info("test to create ipsec policy");
+        LOG.info("test to create ipsec policy")
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
         expected.update(extras)
-        ipsec_policy = self._ipsec_policy_create(name=expected['name'], 
-                       description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], life_time=expected['life_time'])
-        for k in ('id','encryption_algorithm','authentication_algorithm',
-                    'dh_group','life_time'):
+        ipsec_policy = self._ipsec_policy_create(
+            name=expected['name'],
+            description=expected['description'],
+            enc_alg=expected['enc_alg'],
+            auth_alg=expected['auth_alg'],
+            dh_group=expected['dh_group'],
+            life_time=expected['life_time']
+        )
+        for k in ('id', 'enc_alg', 'auth_alg',
+                  'dh_group', 'life_time'):
             self.assertTrue(ipsec_policy.get(k, None))
         self.assertEqual(
             dict((k, v) for k, v in ipsec_policy.items() if k in expected),
@@ -428,49 +422,56 @@ class VPNTestCase(base.BaseTestCase):
         return ipsec_policy
 
     def test_update_ipsec_policy(self):
-        LOG.info("test to update ipsec_policy");
+        LOG.info("test to update ipsec_policy")
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
-            'life_time': 3600}
-        ipsec_policy = self._ipsec_policy_create(name=expected['name'], 
-                       description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+            'life_time': 3600
+        }
+        ipsec_policy = self._ipsec_policy_create(
+            name=expected['name'],
+            description=expected['description'],
+            enc_alg=expected['enc_alg'],
+            auth_alg=expected['auth_alg'],
+            dh_group=expected['dh_group'],
+            life_time=expected['life_time'])
         new_expected = {
-                            'name': 'new policy',
-                            'encryption_algorithm': "aesgcm",
-                            'dh_group': "5",
-                            'life_time': 1800
-                    }
-        new_ipsec_policy = self._ipsec_policy_update(ipsec_policy['id'], new_expected)
+            'name': 'new policy',
+            'enc_alg': "aesgcm",
+            'dh_group': "5",
+            'life_time': 1800
+        }
+        new_ipsec_policy = self._ipsec_policy_update(ipsec_policy['id'],
+                                                     new_expected)
         self.assertEqual(ipsec_policy['id'], new_ipsec_policy['id'])
         self.assertEqual(
-            dict((k, v) for k, v in new_ipsec_policy.items() if k in new_expected),
+            dict((k, v) for k, v in new_ipsec_policy.items()
+                 if k in new_expected),
             new_expected
         )
         return new_ipsec_policy
 
     def test_list_ipsec_policys(self):
-        LOG.info("test to list ipsec_policys");
+        LOG.info("test to list ipsec_policys")
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
-        ipsec_policy = self._ipsec_policy_create(name=expected['name'], 
-                       description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], life_time=expected['life_time'])
-        for k in ('id','encryption_algorithm','authentication_algorithm',
-                    'dh_group','life_time'):
+        ipsec_policy = self._ipsec_policy_create(
+            name=expected['name'],
+            description=expected['description'],
+            enc_alg=expected['enc_alg'],
+            auth_alg=expected['auth_alg'],
+            dh_group=expected['dh_group'],
+            life_time=expected['life_time'])
+        for k in ('id', 'enc_alg', 'auth_alg',
+                  'dh_group', 'life_time'):
             self.assertTrue(ipsec_policy.get(k, None))
         self.assertEqual(
             dict((k, v) for k, v in ipsec_policy.items() if k in expected),
@@ -480,78 +481,88 @@ class VPNTestCase(base.BaseTestCase):
         print(json.dumps(res, indent=4))
         return res
 
-
     def test_delete_ipsec_policy(self):
-        LOG.info("test to delete ipsec_policy");
+        LOG.info("test to delete ipsec_policy")
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
-        ipsec_policy = self._ipsec_policy_create(name=expected['name'], 
-                       description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        ipsec_policy = self._ipsec_policy_create(
+            name=expected['name'],
+            description=expected['description'],
+            enc_alg=expected['enc_alg'],
+            auth_alg=expected['auth_alg'],
+            dh_group=expected['dh_group'],
+            life_time=expected['life_time'])
         ipsec_policy = self._ipsec_policy_delete(id=ipsec_policy['id'])
         return
 
-
     def test_get_ipsec_policys(self):
-        LOG.info("test to get ipsec_policys");
+        LOG.info("test to get ipsec_policys")
         ipsec_policy1 = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
-        ipsec_policy1_get = self._ipsec_policy_create(name=ipsec_policy1['name'], 
-                       description=ipsec_policy1['description'],
-                       encryption_algorithm=ipsec_policy1['encryption_algorithm'],
-                       authentication_algorithm=ipsec_policy1['authentication_algorithm'],
-                       dh_group=ipsec_policy1['dh_group'], life_time=ipsec_policy1['life_time'])
+        ipsec_policy1_get = self._ipsec_policy_create(
+            name=ipsec_policy1['name'],
+            description=ipsec_policy1['description'],
+            enc_alg=ipsec_policy1['enc_alg'],
+            auth_alg=ipsec_policy1['auth_alg'],
+            dh_group=ipsec_policy1['dh_group'],
+            life_time=ipsec_policy1['life_time'])
         ipsec_policy2 = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 1800}
-        ipsec_policy2_get = self._ipsec_policy_create(name=ipsec_policy2['name'], 
-                       description=ipsec_policy2['description'],
-                       encryption_algorithm=ipsec_policy2['encryption_algorithm'],
-                       authentication_algorithm=ipsec_policy2['authentication_algorithm'],
-                       dh_group=ipsec_policy2['dh_group'], life_time=ipsec_policy2['life_time'])
+        ipsec_policy2_get = self._ipsec_policy_create(
+            name=ipsec_policy2['name'],
+            description=ipsec_policy2['description'],
+            enc_alg=ipsec_policy2['enc_alg'],
+            auth_alg=ipsec_policy2['auth_alg'],
+            dh_group=ipsec_policy2['dh_group'],
+            life_time=ipsec_policy2['life_time'])
         ipsec_policys = self._get_resources('ipsec_policy')
         self.assertEqual(len(ipsec_policys), 2)
         self.assertEqual(ipsec_policys[0]['name'], ipsec_policy1_get['name'])
         self.assertEqual(ipsec_policys[1]['name'], ipsec_policy2_get['name'])
-        self.assertEqual(ipsec_policys[0]['description'], ipsec_policy1_get['description'])
-        self.assertEqual(ipsec_policys[1]['description'], ipsec_policy2_get['description'])
+        self.assertEqual(ipsec_policys[0]['description'],
+                         ipsec_policy1_get['description'])
+        self.assertEqual(ipsec_policys[1]['description'],
+                         ipsec_policy2_get['description'])
         r1 = self._get_resource('ipsec_policy', ipsec_policy1_get['id'])
         r2 = self._get_resource('ipsec_policy', ipsec_policy2_get['id'])
         self.assertEqual(r1['id'], ipsec_policy1_get['id'])
         self.assertEqual(r2['id'], ipsec_policy2_get['id'])
 
-
-############################################################################################
+###############################################################################
 ## Isakmp Policy test
     def _isakmp_policy_create(self, name='isakmp_policy1',
-                            authentication_mode='psk',
-                            enable_pfs=True,
-                            encryption_algorithm='aes256', authentication_algorithm='sha1',
-                            dh_group='2', life_time=28000,description=None):
-        data = {'isakmp_policy': {'name': name,
-                                  'tenant_id': self._tenant_id,
-                                  'authentication_mode': authentication_mode,
-                                  'enable_pfs': enable_pfs,
-                                  'encryption_algorithm': encryption_algorithm,
-                                  'authentication_algorithm': authentication_algorithm,
-                                  'dh_group': dh_group,
-                                  'life_time': life_time}}
+                              auth_mode='psk',
+                              enable_pfs=True,
+                              enc_alg='aes256', auth_alg='sha1',
+                              dh_group='2', life_time=28000,
+                              description=None):
+        data = {
+            'isakmp_policy': {
+                'name': name,
+                'tenant_id': self._tenant_id,
+                'auth_mode': auth_mode,
+                'enable_pfs': enable_pfs,
+                'enc_alg': enc_alg,
+                'auth_alg': auth_alg,
+                'dh_group': dh_group,
+                'life_time': life_time
+            }
+        }
         if description:
             data['isakmp_policy']['description'] = description
         res = self._do_request('POST', _get_path('vpn/isakmp_policys'), data)
@@ -564,10 +575,9 @@ class VPNTestCase(base.BaseTestCase):
             return old_isakmp_policy['isakmp_policy']
         data = {
             "isakmp_policy": isakmp_policy
-            }
+        }
         new_isakmp_policy = self._do_request('PUT', _get_path(path), data)
         return new_isakmp_policy['isakmp_policy']
-
 
     def _isakmp_policy_delete(self, id):
         path = 'vpn/isakmp_policys/{0}'.format(id)
@@ -575,22 +585,24 @@ class VPNTestCase(base.BaseTestCase):
         return res
 
     def test_create_isakmp_policy(self, **extras):
-        LOG.info("test to create isakmp policy");
+        LOG.info("test to create isakmp policy")
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
         expected.update(extras)
-        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
-                       description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], life_time=expected['life_time'])
-        for k in ('id','encryption_algorithm','authentication_algorithm',
-                    'dh_group','life_time'):
+        isakmp_policy = self._isakmp_policy_create(
+            name=expected['name'],
+            description=expected['description'],
+            enc_alg=expected['enc_alg'],
+            auth_alg=expected['auth_alg'],
+            dh_group=expected['dh_group'],
+            life_time=expected['life_time'])
+        for k in ('id', 'enc_alg', 'auth_alg',
+                  'dh_group', 'life_time'):
             self.assertTrue(isakmp_policy.get(k, None))
         self.assertEqual(
             dict((k, v) for k, v in isakmp_policy.items() if k in expected),
@@ -600,111 +612,124 @@ class VPNTestCase(base.BaseTestCase):
         return isakmp_policy
 
     def test_update_isakmp_policy(self):
-        LOG.info("test to update isakmp_policy");
+        LOG.info("test to update isakmp_policy")
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
-        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
-                       description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        isakmp_policy = self._isakmp_policy_create(
+            name=expected['name'],
+            description=expected['description'],
+            enc_alg=expected['enc_alg'],
+            auth_alg=expected['auth_alg'],
+            dh_group=expected['dh_group'],
+            life_time=expected['life_time'])
         new_expected = {
-                            'name': 'new policy',
-                            'encryption_algorithm': "aesgcm",
-                            'dh_group': "5",
-                            'life_time': 1800
-                    }
-        new_isakmp_policy = self._isakmp_policy_update(isakmp_policy['id'], new_expected)
+            'name': 'new policy',
+            'enc_alg': "aesgcm",
+            'dh_group': "5",
+            'life_time': 1800
+        }
+        new_isakmp_policy = self._isakmp_policy_update(isakmp_policy['id'],
+                                                       new_expected)
         self.assertEqual(isakmp_policy['id'], new_isakmp_policy['id'])
         self.assertEqual(
-            dict((k, v) for k, v in new_isakmp_policy.items() if k in new_expected),
+            dict((k, v) for k, v in new_isakmp_policy.items()
+                 if k in new_expected),
             new_expected
         )
         return new_isakmp_policy
 
     def test_list_isakmp_policys(self):
-        LOG.info("test to list isakmp_policys");
+        LOG.info("test to list isakmp_policys")
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
-        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
-                       description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], life_time=expected['life_time'])
-        for k in ('id','encryption_algorithm','authentication_algorithm',
-                    'dh_group','life_time'):
+        isakmp_policy = self._isakmp_policy_create(
+            name=expected['name'],
+            description=expected['description'],
+            enc_alg=expected['enc_alg'],
+            auth_alg=expected['auth_alg'],
+            dh_group=expected['dh_group'],
+            life_time=expected['life_time'])
+        for k in ('id', 'enc_alg', 'auth_alg',
+                  'dh_group', 'life_time'):
             self.assertTrue(isakmp_policy.get(k, None))
         self.assertEqual(
-            dict((k, v) for k, v in isakmp_policy.items() if k in expected),
+            dict((k, v) for k, v in isakmp_policy.items()
+                 if k in expected),
             expected
         )
         res = self._get_resources('isakmp_policy')
         print(json.dumps(res, indent=4))
         return res
 
-
     def test_delete_isakmp_policy(self):
-        LOG.info("test to delete isakmp_policy");
+        LOG.info("test to delete isakmp_policy")
         expected = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
-        isakmp_policy = self._isakmp_policy_create(name=expected['name'], 
-                       description=expected['description'],
-                       encryption_algorithm=expected['encryption_algorithm'],
-                       authentication_algorithm=expected['authentication_algorithm'],
-                       dh_group=expected['dh_group'], life_time=expected['life_time'])
+        isakmp_policy = self._isakmp_policy_create(
+            name=expected['name'],
+            description=expected['description'],
+            enc_alg=expected['enc_alg'],
+            auth_alg=expected['auth_alg'],
+            dh_group=expected['dh_group'],
+            life_time=expected['life_time'])
         isakmp_policy = self._isakmp_policy_delete(id=isakmp_policy['id'])
         return
 
-
     def test_get_isakmp_policys(self):
-        LOG.info("test to get isakmp_policys");
+        LOG.info("test to get isakmp_policys")
         isakmp_policy1 = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 3600}
-        isakmp_policy1_get = self._isakmp_policy_create(name=isakmp_policy1['name'], 
-                       description=isakmp_policy1['description'],
-                       encryption_algorithm=isakmp_policy1['encryption_algorithm'],
-                       authentication_algorithm=isakmp_policy1['authentication_algorithm'],
-                       dh_group=isakmp_policy1['dh_group'], life_time=isakmp_policy1['life_time'])
+        isakmp_policy1_get = self._isakmp_policy_create(
+            name=isakmp_policy1['name'],
+            description=isakmp_policy1['description'],
+            enc_alg=isakmp_policy1['enc_alg'],
+            auth_alg=isakmp_policy1['auth_alg'],
+            dh_group=isakmp_policy1['dh_group'],
+            life_time=isakmp_policy1['life_time'])
         isakmp_policy2 = {
             'name': '',
             'description': '',
-            'encryption_algorithm': 'aes256',
-            'authentication_algorithm': 'sha1', 
+            'enc_alg': 'aes256',
+            'auth_alg': 'sha1',
             'dh_group': '2',
             'life_time': 1800}
-        isakmp_policy2_get = self._isakmp_policy_create(name=isakmp_policy2['name'], 
-                       description=isakmp_policy2['description'],
-                       encryption_algorithm=isakmp_policy2['encryption_algorithm'],
-                       authentication_algorithm=isakmp_policy2['authentication_algorithm'],
-                       dh_group=isakmp_policy2['dh_group'], life_time=isakmp_policy2['life_time'])
+        isakmp_policy2_get = self._isakmp_policy_create(
+            name=isakmp_policy2['name'],
+            description=isakmp_policy2['description'],
+            enc_alg=isakmp_policy2['enc_alg'],
+            auth_alg=isakmp_policy2['auth_alg'],
+            dh_group=isakmp_policy2['dh_group'],
+            life_time=isakmp_policy2['life_time'])
         isakmp_policys = self._get_resources('isakmp_policy')
         print "isakmp_policys:"
         print isakmp_policys
         self.assertEqual(len(isakmp_policys), 2)
         self.assertEqual(isakmp_policys[0]['name'], isakmp_policy1_get['name'])
         self.assertEqual(isakmp_policys[1]['name'], isakmp_policy2_get['name'])
-        self.assertEqual(isakmp_policys[0]['description'], isakmp_policy1_get['description'])
-        self.assertEqual(isakmp_policys[1]['description'], isakmp_policy2_get['description'])
+        self.assertEqual(isakmp_policys[0]['description'],
+                         isakmp_policy1_get['description'])
+        self.assertEqual(isakmp_policys[1]['description'],
+                         isakmp_policy2_get['description'])
         r1 = self._get_resource('isakmp_policy', isakmp_policy1_get['id'])
         r2 = self._get_resource('isakmp_policy', isakmp_policy2_get['id'])
         self.assertEqual(r1['id'], isakmp_policy1_get['id'])

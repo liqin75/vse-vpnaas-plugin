@@ -40,6 +40,7 @@ from quantum import policy
 
 LOG = logging.getLogger(__name__)
 
+
 class Site(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     """Represents a v2 quantum VPN site."""
     name = sa.Column(sa.String(255))
@@ -52,26 +53,32 @@ class Site(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     mtu = sa.Column(sa.Integer, nullable=True)
     pri_networks = sa.Column(sa.String(2048), nullable=False)
     subnet_id = sa.Column(sa.String(64), nullable=True)
+    status = sa.Column(sa.String(16), nullable=False)
+
 
 class IPSecPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     """Represents a v2 quantum VPN Ipsec Policy."""
     name = sa.Column(sa.String(32))
     description = sa.Column(sa.String(255), nullable=True)
-    encryption_algorithm = sa.Column(sa.String(16), nullable=True)
-    authentication_algorithm = sa.Column(sa.String(8), nullable=True)
+    enc_alg = sa.Column(sa.String(16), nullable=True)
+    auth_alg = sa.Column(sa.String(8), nullable=True)
     dh_group = sa.Column(sa.String(2), nullable=True)
     life_time = sa.Column(sa.Integer, nullable=True)
+    status = sa.Column(sa.String(16), nullable=False)
+
 
 class IsakmpPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     """Represents a v2 quantum VPN Isakmp Policy."""
     name = sa.Column(sa.String(32))
     description = sa.Column(sa.String(255))
-    authentication_mode = sa.Column(sa.String(16), nullable=True)
-    encryption_algorithm = sa.Column(sa.String(16), nullable=True)
-    authentication_algorithm = sa.Column(sa.String(8), nullable=True)
-    enable_pfs = sa.Column(sa.Boolean, nullable = True)
+    auth_mode = sa.Column(sa.String(16), nullable=True)
+    enc_alg = sa.Column(sa.String(16), nullable=True)
+    auth_alg = sa.Column(sa.String(8), nullable=True)
+    enable_pfs = sa.Column(sa.Boolean, nullable=True)
     dh_group = sa.Column(sa.String(1), nullable=True)
     life_time = sa.Column(sa.Integer, nullable=True)
+    status = sa.Column(sa.String(16), nullable=False)
+
 
 class VPNPluginDb(VPNPluginBase):
     """
@@ -193,8 +200,9 @@ class VPNPluginDb(VPNPluginBase):
         for pair in pairs:
             match = re.search("(.*?)-(.*)", pair)
             if match:
-               pri_networks.append({'local_subnets': match.group(1),
-                                    'peer_subnets': match.group(2)})        
+                pri_networks.append({
+                    'local_subnets': match.group(1),
+                    'peer_subnets': match.group(2)})
         res = {'id': site['id'],
                'tenant_id': site['tenant_id'],
                'subnet_id': site['subnet_id'],
@@ -210,14 +218,14 @@ class VPNPluginDb(VPNPluginBase):
 
         return self._fields(res, fields)
 
-
     def _subnets_to_str(self, pri_networks):
         res = ""
         count = 0
         for pair in pri_networks:
             if (count > 0):
                 res += ';'
-            res += '{0}-{1}'.format(pair['local_subnets'], pair['peer_subnets'])
+            res += '{0}-{1}'.format(pair['local_subnets'],
+                                    pair['peer_subnets'])
             count += 1
         return res
 
@@ -228,17 +236,18 @@ class VPNPluginDb(VPNPluginBase):
         with context.session.begin(subtransactions=True):
             pri_networks = self._subnets_to_str(s['pri_networks'])
             site_db = Site(id=uuidutils.generate_uuid(),
-                         tenant_id=tenant_id,
-                         subnet_id=s['subnet_id'],
-                         name=s['name'],
-                         description=s['description'],
-                         local_endpoint=s['local_endpoint'],
-                         peer_endpoint=s['peer_endpoint'],
-                         local_id=s['local_id'],
-                         peer_id=s['peer_id'],
-                         pri_networks=pri_networks,
-                         psk=s['psk'],
-                         mtu=s['mtu'])
+                           tenant_id=tenant_id,
+                           subnet_id=s['subnet_id'],
+                           name=s['name'],
+                           description=s['description'],
+                           local_endpoint=s['local_endpoint'],
+                           peer_endpoint=s['peer_endpoint'],
+                           local_id=s['local_id'],
+                           peer_id=s['peer_id'],
+                           pri_networks=pri_networks,
+                           psk=s['psk'],
+                           mtu=s['mtu'],
+                           status=constants.PENDING_CREATE)
 
             try:
                 context.session.add(site_db)
@@ -251,16 +260,13 @@ class VPNPluginDb(VPNPluginBase):
 
     def update_site(self, context, id, site):
         s = site['site']
-        if s.has_key('pri_networks'):
-            pri_networks = self._subnets_to_str(s['pri_networks'])
-            s['pri_networks'] = pri_networks
-
         with context.session.begin(subtransactions=True):
             site_db = self._get_resource(context, Site, id)
-
             self.assert_modification_allowed(site_db)
-
             if s:
+                if 'pri_networks' in s.keys():
+                    pri_networks = self._subnets_to_str(s['pri_networks'])
+                    s['pri_networks'] = pri_networks
                 try:
                     site_db.update(s)
                     # To be add validation here
@@ -286,7 +292,6 @@ class VPNPluginDb(VPNPluginBase):
                                     self._make_site_dict,
                                     filters=filters, fields=fields)
 
-
     ########################################################
     # Ipsec Policy DB access
     def _make_ipsec_policy_dict(self, ipsecp, fields=None):
@@ -294,26 +299,27 @@ class VPNPluginDb(VPNPluginBase):
                'tenant_id': ipsecp['tenant_id'],
                'name': ipsecp['name'],
                'description': ipsecp['description'],
-               'encryption_algorithm': ipsecp['encryption_algorithm'],
-               'authentication_algorithm': ipsecp['authentication_algorithm'],
+               'enc_alg': ipsecp['enc_alg'],
+               'auth_alg': ipsecp['auth_alg'],
                'dh_group': ipsecp['dh_group'],
                'life_time': ipsecp['life_time']}
 
         return self._fields(res, fields)
 
     def create_ipsec_policy(self, context, ipsecp):
-        s = ipsecp['ipsec_policy']
-        tenant_id = self._get_tenant_id_for_create(context, s)
+        p = ipsecp['ipsec_policy']
+        tenant_id = self._get_tenant_id_for_create(context, p)
 
         with context.session.begin(subtransactions=True):
             ipsecp_db = IPSecPolicy(id=uuidutils.generate_uuid(),
-                                tenant_id=tenant_id,
-                                name=s['name'],
-                                description=s['description'],
-                                encryption_algorithm=s['encryption_algorithm'],
-                                authentication_algorithm=s['authentication_algorithm'],
-                                dh_group=s['dh_group'],
-                                life_time=s['life_time'])
+                                    tenant_id=tenant_id,
+                                    name=p['name'],
+                                    description=p['description'],
+                                    enc_alg=p['enc_alg'],
+                                    auth_alg=p['auth_alg'],
+                                    dh_group=p['dh_group'],
+                                    life_time=p['life_time'],
+                                    status=constants.PENDING_CREATE)
 
             try:
                 context.session.add(ipsecp_db)
@@ -323,18 +329,14 @@ class VPNPluginDb(VPNPluginBase):
 
         return self._make_ipsec_policy_dict(ipsecp_db)
 
-
     def update_ipsec_policy(self, context, id, ipsecp):
-        s = ipsecp['ipsec_policy']
-
+        p = ipsecp['ipsec_policy']
         with context.session.begin(subtransactions=True):
             ipsecp_db = self._get_resource(context, IPSecPolicy, id)
-
             self.assert_modification_allowed(ipsecp_db)
-
-            if s:
+            if p:
                 try:
-                    ipsecp_db.update(s)
+                    ipsecp_db.update(p)
                     # To be add validation here
                     LOG.debug(_("update_ipsec_policy: %s") % id)
                 except sa_exc.IntegrityError:
@@ -357,8 +359,6 @@ class VPNPluginDb(VPNPluginBase):
                                     self._make_ipsec_policy_dict,
                                     filters=filters, fields=fields)
 
-
-
     ########################################################
     # Isakmp Policy DB access
     def _make_isakmp_policy_dict(self, isakmpp, fields=None):
@@ -366,10 +366,10 @@ class VPNPluginDb(VPNPluginBase):
                'tenant_id': isakmpp['tenant_id'],
                'name': isakmpp['name'],
                'description': isakmpp['description'],
-               'authentication_mode': isakmpp['authentication_mode'],
+               'auth_mode': isakmpp['auth_mode'],
                'enable_pfs': isakmpp['enable_pfs'],
-               'encryption_algorithm': isakmpp['encryption_algorithm'],
-               'authentication_algorithm': isakmpp['authentication_algorithm'],
+               'enc_alg': isakmpp['enc_alg'],
+               'auth_alg': isakmpp['auth_alg'],
                'dh_group': isakmpp['dh_group'],
                'life_time': isakmpp['life_time']}
 
@@ -381,15 +381,16 @@ class VPNPluginDb(VPNPluginBase):
 
         with context.session.begin(subtransactions=True):
             isakmpp_db = IsakmpPolicy(id=uuidutils.generate_uuid(),
-                                tenant_id=tenant_id,
-                                name=s['name'],
-                                description=s['description'],
-                                authentication_mode= s['authentication_mode'],
-                                enable_pfs = s['enable_pfs'],
-                                encryption_algorithm=s['encryption_algorithm'],
-                                authentication_algorithm=s['authentication_algorithm'],
-                                dh_group=s['dh_group'],
-                                life_time=s['life_time'])
+                                      tenant_id=tenant_id,
+                                      name=s['name'],
+                                      description=s['description'],
+                                      auth_mode=s['auth_mode'],
+                                      enable_pfs=s['enable_pfs'],
+                                      enc_alg=s['enc_alg'],
+                                      auth_alg=s['auth_alg'],
+                                      dh_group=s['dh_group'],
+                                      life_time=s['life_time'],
+                                      status=constants.PENDING_CREATE)
 
             try:
                 context.session.add(isakmpp_db)
@@ -398,7 +399,6 @@ class VPNPluginDb(VPNPluginBase):
                 raise vpn.IsakmpPolicyExists()
 
         return self._make_isakmp_policy_dict(isakmpp_db)
-
 
     def update_isakmp_policy(self, context, id, isakmpp):
         s = isakmpp['isakmp_policy']
