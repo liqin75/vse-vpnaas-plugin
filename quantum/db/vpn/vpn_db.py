@@ -80,6 +80,16 @@ class IsakmpPolicy(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
     status = sa.Column(sa.String(16), nullable=False)
 
 
+class TrustProfile(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):
+    """Represents a v2 quantum VPN Trust Profile."""
+    name = sa.Column(sa.String(32))
+    description = sa.Column(sa.String(255))
+    trust_ca = sa.Column(sa.String(255))
+    crl = sa.Column(sa.String(255))
+    server_cert = sa.Column(sa.String(255))
+    status = sa.Column(sa.String(16), nullable=False)
+
+
 class VPNPluginDb(VPNPluginBase):
     """
     A class that wraps the implementation of the Quantum
@@ -167,6 +177,8 @@ class VPNPluginDb(VPNPluginBase):
                 raise vpn.IPSecPolicyNotFound(ipsec_policy_id=id)
             elif issubclass(model, IsakmpPolicy):
                 raise vpn.IsakmpPolicyNotFound(isakmp_policy_id=id)
+            elif issubclass(model, TrustProfile):
+                raise vpn.TrustProfileNotFound(trust_profile_id=id)
             else:
                 raise
         return r
@@ -427,4 +439,68 @@ class VPNPluginDb(VPNPluginBase):
     def get_isakmp_policys(self, context, filters=None, fields=None):
         return self._get_collection(context, IsakmpPolicy,
                                     self._make_isakmp_policy_dict,
+                                    filters=filters, fields=fields)
+
+    ########################################################
+    # Trust Profile DB access
+    def _make_trust_profile_dict(self, trustp, fields=None):
+        res = {'id': trustp['id'],
+               'tenant_id': trustp['tenant_id'],
+               'name': trustp['name'],
+               'description': trustp['description'],
+               'trust_ca': trustp['trust_ca'],
+               'crl': trustp['crl'],
+               'server_cert': trustp['server_cert']}
+
+        return self._fields(res, fields)
+
+    def create_trust_profile(self, context, trustp):
+        t = trustp['trust_profile']
+        tenant_id = self._get_tenant_id_for_create(context, t)
+
+        with context.session.begin(subtransactions=True):
+            trustp_db = TrustProfile(id=uuidutils.generate_uuid(),
+                                     tenant_id=tenant_id,
+                                     name=t['name'],
+                                     description=t['description'],
+                                     trust_ca=t['trust_ca'],
+                                     crl=t['crl'],
+                                     server_cert=t['server_cert'],
+                                     status=constants.PENDING_CREATE)
+
+            try:
+                context.session.add(trustp_db)
+                context.session.flush()
+            except sa_exc.IntegrityError:
+                raise vpn.TrustProfileExists()
+
+        return self._make_trust_profile_dict(trustp_db)
+
+    def update_trust_profile(self, context, id, trustp):
+        s = trustp['trust_profile']
+        with context.session.begin(subtransactions=True):
+            trustp_db = self._get_resource(context, TrustProfile, id)
+            self.assert_modification_allowed(trustp_db)
+            if s:
+                try:
+                    trustp_db.update(s)
+                    # To be add validation here
+                    LOG.debug(_("update_trust_profile: %s") % id)
+                except sa_exc.IntegrityError:
+                    raise vpn.TrustProfileExists()
+        return self._make_trust_profile_dict(trustp_db)
+
+    def delete_trust_profile(self, context, id):
+        with context.session.begin(subtransactions=True):
+            trustp = self._get_resource(context, TrustProfile, id)
+            context.session.delete(trustp)
+            context.session.flush()
+
+    def get_trust_profile(self, context, id, fields=None):
+        trustp = self._get_resource(context, TrustProfile, id)
+        return self._make_trust_profile_dict(trustp, fields)
+
+    def get_trust_profiles(self, context, filters=None, fields=None):
+        return self._get_collection(context, TrustProfile,
+                                    self._make_trust_profile_dict,
                                     filters=filters, fields=fields)

@@ -227,19 +227,43 @@ class VPNPlugin(vpn_db.VPNPluginDb):
         super(VPNPlugin, self).delete_ipsec_policy(context, id)
 
     def get_trust_profiles(self, context, filters=None, fields=None):
-        pass
+        res = super(VPNPlugin, self).get_trust_profiles(context,
+                                                        filters, fields)
+        LOG.debug(_("Get trust profiles"))
+        return res
 
     def get_trust_profile(self, context, id, fields=None):
-        pass
+        res = super(VPNPlugin, self).get_trust_profile(context, id, fields)
+        LOG.debug(_("Get trust profile: %s"), id)
+        return res
 
     def create_trust_profile(self, context, trust_profile):
-        pass
+        s = super(VPNPlugin, self).create_trust_profile(context, trust_profile)
+        self.update_status(context, vpn_db.TrustProfile, s['id'],
+                           constants.PENDING_CREATE)
+        LOG.debug(_("Create trust profile: %s") % s['id'])
+
+        s_query = self.get_trust_profile(context, s['id'])
+        return s_query
 
     def update_trust_profile(self, context, id, trust_profile):
-        pass
+        if 'status' not in trust_profile['trust_profile']:
+            trust_profile['trust_profile']['status'] = constants.PENDING_UPDATE
+        s = super(VPNPlugin, self).update_trust_profile(context,
+                                                        id, trust_profile)
+        LOG.debug(_("Update trust profile: %s"), id)
+
+        # TODO notify vpnagent
+        s_rt = self.get_trust_profile(context, id)
+        return s_rt
 
     def delete_trust_profile(self, context, id):
-        pass
+        self.update_status(context, vpn_db.TrustProfile,
+                           id, constants.PENDING_DELETE)
+        LOG.debug(_("Delete trust profile: %s"), id)
+
+        # TODO notify vpnagent
+        super(VPNPlugin, self).delete_trust_profile(context, id)
 
     def stats(self, context, site_id):
         pass

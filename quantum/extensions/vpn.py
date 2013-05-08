@@ -58,6 +58,10 @@ class TrustProfileNotFound(qexception.NotFound):
     message = _("Trust profile %(trust_profile)s could not be found")
 
 
+class TrustProfileExists(qexception.QuantumException):
+    message = _("Another Trust Profile already exists")
+
+
 class StateInvalid(qexception.QuantumException):
     message = _("Invalid state %(state)s of VPN resource %(id)s")
 
@@ -238,7 +242,7 @@ RESOURCE_ATTRIBUTE_MAP = {
                      'is_visible': True},
         'crl': {'allow_post': True, 'allow_put': True,
                 'is_visible': True, 'default': ''},
-        'server_certificate': {'allow_post': True, 'allow_put': True,
+        'server_cert': {'allow_post': True, 'allow_put': True,
                                'is_visible': True}
     }
 

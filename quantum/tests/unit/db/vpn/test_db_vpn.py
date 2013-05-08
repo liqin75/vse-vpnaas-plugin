@@ -235,6 +235,56 @@ class VPNPluginDbTestCase(test_db_plugin.QuantumDbPluginV2TestCase):
                 self._delete('isakmp_policys',
                              isakmp_policy['isakmp_policy']['id'])
 
+##############################################################################
+# Trust Profile
+    def _create_trust_profile(self, fmt, name,
+                              trust_ca, crl,
+                              server_cert,
+                              expected_res_status=None,
+                              **kwargs):
+        data = {
+            'trust_profile': {
+                'name': name,
+                'tenant_id': self._tenant_id,
+                'trust_ca': trust_ca,
+                'crl': crl,
+                'server_cert': server_cert
+            }
+        }
+        for arg in ('description'):
+            if arg in kwargs and kwargs[arg] is not None:
+                data['trust_profile'][arg] = kwargs[arg]
+        trust_profile_req = self.new_create_request('trust_profiles',
+                                                    data, fmt)
+        trust_profile_res = trust_profile_req.get_response(self.ext_api)
+        
+        if expected_res_status:
+            self.assertEqual(trust_profile_res.status_int, expected_res_status)
+
+        return trust_profile_res
+
+    @contextlib.contextmanager
+    def trust_profile(self, fmt=None, name='',
+                      trust_ca='trust_ca', crl='crl',
+                      server_cert='server_cert',
+                      no_delete=False, **kwargs):
+        if not fmt:
+            fmt = self.fmt
+
+        res = self._create_trust_profile(fmt, name,
+                                         trust_ca, crl,
+                                         server_cert,
+                                         **kwargs)
+        trust_profile = self.deserialize(fmt or self.fmt, res)
+        if res.status_int >= 400:
+            raise webob.exc.HTTPClientError(code=res.status_int)
+        try:
+            yield trust_profile
+        finally:
+            if not no_delete:
+                self._delete('trust_profiles',
+                             trust_profile['trust_profile']['id'])
+
 
 ############################################################################
 # Test Cases
@@ -493,3 +543,77 @@ class TestVPN(VPNPluginDbTestCase):
             self.assertEqual(len(res), 1)
             for k, v in keys:
                 self.assertEqual(res['isakmp_policys'][0][k], v)
+
+###############################################################################
+# Trust Profile Test cases
+
+    def test_create_trust_profile(self, **extras):
+        expected = {
+            'name': 'haha',
+            'description': '',
+            'trust_ca': 'trust_ca',
+            'crl': 'crl',
+            'server_cert': 'server_cert'
+        }
+        name = expected['name']
+        expected.update(extras)
+        with self.trust_profile(name=name, description=expected['description'],
+                                trust_ca=expected['trust_ca'],
+                                crl=expected['crl'],
+                                server_cert=expected['server_cert'],
+                                **extras) as trust_profile:
+            self.assertEqual(
+                dict((k, v)
+                     for k, v in trust_profile['trust_profile'].items()
+                     if k in expected),
+                expected
+            )
+        return trust_profile
+
+    def test_update_trust_profile(self):
+        name = 'new_trust_profile'
+        keys = [('name', name),
+                ('trust_ca', 'new_trust_ca')]
+
+        with self.trust_profile(name=name) as trust_profile:
+            data = {
+                'trust_profile': {
+                    'name': name,
+                    'trust_ca': 'new_trust_ca'
+                }
+            }
+            req = self.new_update_request('trust_profiles', data,
+                                          trust_profile['trust_profile']['id'])
+            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
+            for k, v in keys:
+                self.assertEqual(res['trust_profile'][k], v)
+
+    def test_delete_trust_profile(self):
+        with self.trust_profile(no_delete=True) as trust_profile:
+            req = self.new_delete_request('trust_profiles',
+                                          trust_profile['trust_profile']['id'])
+            res = req.get_response(self.ext_api)
+            self.assertEqual(res.status_int, 204)
+
+    def test_show_trust_profile(self):
+        name = "trust_profile_show"
+        keys = [('name', name),
+                ('trust_ca', "trust_ca")]
+        with self.trust_profile(name=name) as trust_profile:
+            req = self.new_show_request('trust_profiles',
+                                        trust_profile['trust_profile']['id'])
+            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
+            for k, v in keys:
+                self.assertEqual(res['trust_profile'][k], v)
+
+    def test_list_trust_profiles(self):
+        name = "trust_profiles_list"
+        keys = [('name', name),
+                ('trust_ca', "trust_ca")]
+        with self.trust_profile(name=name) as trust_profile:
+            keys.append(('id', trust_profile['trust_profile']['id']))
+            req = self.new_list_request('trust_profiles')
+            res = self.deserialize(self.fmt, req.get_response(self.ext_api))
+            self.assertEqual(len(res), 1)
+            for k, v in keys:
+                self.assertEqual(res['trust_profiles'][0][k], v)

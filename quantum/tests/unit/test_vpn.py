@@ -734,3 +734,176 @@ class VPNTestCase(base.BaseTestCase):
         r2 = self._get_resource('isakmp_policy', isakmp_policy2_get['id'])
         self.assertEqual(r1['id'], isakmp_policy1_get['id'])
         self.assertEqual(r2['id'], isakmp_policy2_get['id'])
+
+###############################################################################
+## Trust Profile test
+    def _trust_profile_create(self, name='',
+                              trust_ca='trust_ca',
+                              crl='crl',
+                              server_cert='server_cert',
+                              description=None):
+        data = {
+            'trust_profile': {
+                'name': name,
+                'trust_ca': trust_ca,
+                'crl': crl,
+                'server_cert': server_cert
+            }
+        }
+        if description:
+            data['trust_profile']['description'] = description
+        res = self._do_request('POST', _get_path('vpn/trust_profiles'), data)
+        return res['trust_profile']
+
+    def _trust_profile_update(self, id, trust_profile=None):
+        path = 'vpn/trust_profiles/{0}'.format(id)
+        old_trust_profile = self._do_request('GET', _get_path(path), None)
+        if trust_profile is None:
+            return old_trust_profile['trust_profile']
+        data = {
+            "trust_profile": trust_profile
+        }
+        new_trust_profile = self._do_request('PUT', _get_path(path), data)
+        return new_trust_profile['trust_profile']
+
+    def _trust_profile_delete(self, id):
+        path = 'vpn/trust_profiles/{0}'.format(id)
+        res = self._do_request('DELETE', _get_path(path), None)
+        return res
+
+    def test_create_trust_profile(self, **extras):
+        LOG.info("test to create trust profile")
+        expected = {
+            'name': '',
+            'description': '',
+            'trust_ca': 'trust_ca',
+            'crl': 'crl',
+            'server_cert': 'server_cert'}
+        expected.update(extras)
+        trust_profile = self._trust_profile_create(
+            name=expected['name'],
+            description=expected['description'],
+            trust_ca=expected['trust_ca'],
+            crl=expected['crl'],
+            server_cert=expected['server_cert'])
+        for k in ('id', 'trust_ca', 'crl',
+                  'server_cert'):
+            self.assertTrue(trust_profile.get(k, None))
+        self.assertEqual(
+            dict((k, v) for k, v in trust_profile.items() if k in expected),
+            expected
+        )
+        res = self._get_resource('trust_profile', trust_profile['id'])
+        return trust_profile
+
+    def test_update_trust_profile(self):
+        LOG.info("test to update trust_profile")
+        expected = {
+            'name': '',
+            'description': '',
+            'trust_ca': 'trust_ca',
+            'crl': 'crl',
+            'server_cert': 'server_cert'}
+        trust_profile = self._trust_profile_create(
+            name=expected['name'],
+            description=expected['description'],
+            trust_ca=expected['trust_ca'],
+            crl=expected['crl'],
+            server_cert=expected['server_cert'])
+        new_expected = {
+            'name': 'new policy',
+            'trust_ca': 'new trust_ca',
+            'crl': 'new crl',
+            'server_cert': 'new server_cert'}
+        new_trust_profile = self._trust_profile_update(trust_profile['id'],
+                                                       new_expected)
+        self.assertEqual(trust_profile['id'], new_trust_profile['id'])
+        self.assertEqual(
+            dict((k, v) for k, v in new_trust_profile.items()
+                 if k in new_expected),
+            new_expected
+        )
+        return new_trust_profile
+    def test_list_trust_profiles(self):
+         LOG.info("test to list trust_profiles")
+         expected = {
+             'name': '',
+             'description': '',
+             'trust_ca': 'trust_ca',
+             'crl': 'crl',
+             'server_cert': 'server_cert'}
+         trust_profile = self._trust_profile_create(
+             name=expected['name'],
+             description=expected['description'],
+             trust_ca=expected['trust_ca'],
+             crl=expected['crl'],
+             server_cert=expected['server_cert'])
+         for k in ('id', 'trust_ca', 'crl',
+                   'server_cert'):
+             self.assertTrue(trust_profile.get(k, None))
+         self.assertEqual(
+             dict((k, v) for k, v in trust_profile.items()
+                  if k in expected),
+             expected
+         )
+         res = self._get_resources('trust_profile')
+         print(json.dumps(res, indent=4))
+         return res
+
+    def test_delete_trust_profile(self):
+        LOG.info("test to delete trust_profile")
+        expected = {
+            'name': '',
+            'description': '',
+            'trust_ca': 'trust_ca',
+            'crl': 'crl',
+            'server_cert': 'server_cert'}
+        trust_profile = self._trust_profile_create(
+            name=expected['name'],
+            description=expected['description'],
+            trust_ca=expected['trust_ca'],
+            crl=expected['crl'],
+            server_cert=expected['server_cert'])
+        trust_profile = self._trust_profile_delete(id=trust_profile['id'])
+        return
+
+    def test_get_trust_profiles(self):
+        LOG.info("test to get trust profiles")
+        trust_profile1 = {
+            'name': '',
+            'description': '',
+            'trust_ca': 'trust_ca1',
+            'crl': 'crl1',
+            'server_cert': 'server_cert1'}
+        trust_profile1_get = self._trust_profile_create(
+            name=trust_profile1['name'],
+            description=trust_profile1['description'],
+            trust_ca=trust_profile1['trust_ca'],
+            crl=trust_profile1['crl'],
+            server_cert=trust_profile1['server_cert'])
+        trust_profile2 = {
+            'name': '',
+            'description': '',
+            'trust_ca': 'trust_ca2',
+            'crl': 'crl2',
+            'server_cert': 'server_cert2'}
+        trust_profile2_get = self._trust_profile_create(
+            name=trust_profile2['name'],
+            description=trust_profile2['description'],
+            trust_ca=trust_profile2['trust_ca'],
+            crl=trust_profile2['crl'],
+            server_cert=trust_profile2['server_cert'])
+        trust_profiles = self._get_resources('trust_profile')
+        print "trust_profiles:"
+        print trust_profiles
+        self.assertEqual(len(trust_profiles), 2)
+        self.assertEqual(trust_profiles[0]['name'], trust_profile1_get['name'])
+        self.assertEqual(trust_profiles[1]['name'], trust_profile2_get['name'])
+        self.assertEqual(trust_profiles[0]['description'],
+                         trust_profile1_get['description'])
+        self.assertEqual(trust_profiles[1]['description'],
+                         trust_profile2_get['description'])
+        r1 = self._get_resource('trust_profile', trust_profile1_get['id'])
+        r2 = self._get_resource('trust_profile', trust_profile2_get['id'])
+        self.assertEqual(r1['id'], trust_profile1_get['id'])
+        self.assertEqual(r2['id'], trust_profile2_get['id'])

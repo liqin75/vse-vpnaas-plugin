@@ -212,16 +212,44 @@ class VShieldEdgeVPNPlugin(vpn_db.VPNPluginDb):
         return res
 
     def get_trust_profiles(self, context, filters=None, fields=None):
-        pass
+        res = super(VShieldEdgeVPNPlugin, self).get_trust_profiles(
+                context, filters, fields)
+        LOG.debug(_("Get trust profiles"))
+        return res
 
     def get_trust_profile(self, context, id, fields=None):
-        pass
+        res = super(VShieldEdgeVPNPlugin,
+                    self).get_trust_profile(context, id, fields)
+        LOG.debug(_("Get trust profile: %s"), id)
+        return res
 
     def create_trust_profile(self, context, trust_profile):
+        with context.session.begin(subtransactions=True):
+            p = super(VShieldEdgeVPNPlugin,
+                      self).create_trust_profile(context, trust_profile)
+            self.update_status(context, vpn_db.TrustProfile, p['id'],
+                               constants.PENDING_CREATE)
+            LOG.debug(_("Create trust profile: %s") % p['id'])
+        s_query = self.get_trust_profile(context, p['id'])
+        return s_query
         pass
 
     def update_trust_profile(self, context, id, trust_profile):
-        pass
+        with context.session.begin(subtransactions=True):
+            p = super(VShieldEdgeVPNPlugin,
+                      self).update_trust_profile(context, id, trust_profile)
+            self.update_status(context, vpn_db.TrustProfile, id,
+                               constants.PENDING_UPDATE)
+            LOG.debug(_("Update trust profile: %s"), id)
+
+        s_rt = self.get_trust_profile(context, id)
+        return s_rt
 
     def delete_trust_profile(self, context, id):
-        pass
+        with context.session.begin(subtransactions=True):
+            trust_profile = self.get_trust_profile(context, id)
+            self.update_status(context, vpn_db.TrustProfile, id,
+                               constants.PENDING_DELETE)
+            LOG.debug(_("Delete trust profile: %s"), id)
+            super(VShieldEdgeVPNPlugin,
+                  self).delete_trust_profile(context, id)
